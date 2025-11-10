@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Adventskalender Tag 1 – Kreuzworträtsel (leicht)</title>
+  <title>Adventskalender Tag 1 – Kreuzworträtsel</title>
   <style>
     /* ---------------- Winter-Hintergrund mit Schneefall (CSS-only) ---------------- */
     html, body { height: 100%; }
@@ -16,27 +16,16 @@
         linear-gradient(#e9f4ff, #cfe6ff 30%, #b7d7ff 60%, #a4c9fa);
       overflow-x: hidden;
     }
-    header, footer {
-      text-align: center;
-      color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,.25);
-      position: relative; z-index: 2;
+    header {
+      text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25);
+      position: relative; z-index: 2; padding: 1.25rem 1rem .25rem;
     }
-    header { padding: 1.25rem 1rem .25rem; }
     h1 { margin: 0; }
 
-    .page {
-      max-width: 1100px;
-      margin: 2rem auto 3rem;
-      padding: 1.25rem;
-      position: relative; z-index: 2;
-    }
+    .page { max-width: 1100px; margin: 2rem auto 3rem; padding: 1.25rem; position: relative; z-index: 2; }
     .card {
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(4px);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.12);
-      padding: 1.25rem;
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
+      border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.12); padding: 1.25rem;
     }
 
     /* Schneelayer */
@@ -83,8 +72,13 @@
     @keyframes snowLayer3 { to { background-position: 0 800px, 0 600px, 0 700px, 0 800px, 0 900px, 0 1000px; } }
 
     /* --------------- Crossword Styles --------------- */
-    .layout { display:grid; grid-template-columns: 1fr 340px; gap: 1.25rem; }
-    @media (max-width: 1000px){ .layout{ grid-template-columns: 1fr; } }
+    .controls{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0 1.25rem; }
+    .btn{
+      border:none; background:linear-gradient(90deg, #22c55e, #16a34a); color:#fff;
+      padding:.6rem 1rem; border-radius:999px; cursor:pointer; box-shadow:0 8px 16px rgba(22,163,74,.25);
+      font-weight:700;
+    }
+    .btn.sec{ background:#e11d48; box-shadow:0 8px 16px rgba(225,29,72,.25); }
 
     .grid {
       --cell: 30px; /* Handyfreundlich */
@@ -98,10 +92,7 @@
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
       overflow: auto; max-height: 70vh;
     }
-    .cell {
-      position: relative; background:#fff; border-radius:4px;
-      display:grid; place-items:center; font-weight:700;
-    }
+    .cell { position: relative; background:#fff; border-radius:4px; display:grid; place-items:center; font-weight:700; }
     .cell.block{ background:#1f2937; }
     .cell input{
       width:100%; height:100%; border:none; outline:none; background:transparent;
@@ -109,29 +100,12 @@
     }
     .num { position:absolute; top:2px; left:4px; font-size:10px; color:#475569; font-weight:700; user-select:none; }
 
-    .controls{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0 1.25rem; }
-    .btn{
-      border:none; background:linear-gradient(90deg, #22c55e, #16a34a); color:#fff;
-      padding:.6rem 1rem; border-radius:999px; cursor:pointer; box-shadow:0 8px 16px rgba(22,163,74,.25);
-      font-weight:700;
-    }
-    .btn.sec{ background:#e11d48; box-shadow:0 8px 16px rgba(225,29,72,.25); }
-
-    .side{
-      background: rgba(255,255,255,.85);
-      border-radius:12px; padding:1rem; box-shadow: 0 4px 14px rgba(0,0,0,.08);
-    }
-    .side h2{ margin:.25rem 0 .5rem; }
-    .side ul{ margin:.25rem 0 0 1.2rem; }
-    .side li{ margin:.2rem 0; }
-
     .message { margin:.6rem 0; color:#e11d48; font-weight:700; }
     .letter-box{ text-align:center; margin-top:.5rem; }
     .letter{
       display:inline-block; font-weight:900; font-size:clamp(2rem, 6vw, 3.5rem);
       padding:.35rem 1rem; border-radius:14px; background:#0ea5e9; color:#fff; box-shadow:0 6px 14px rgba(14,165,233,.35);
     }
-    a{ color:#0ea5e9; }
   </style>
 </head>
 <body>
@@ -143,105 +117,70 @@
 
   <div class="page">
     <div class="card">
-      <div class="layout">
-        <!-- Linke Seite: Gitter -->
-        <div>
-          <div class="controls">
-            <button class="btn" id="checkBtn">Überprüfen</button>
-            <button class="btn sec" id="clearBtn">Alles löschen</button>
-          </div>
-          <div id="grid" class="grid" aria-label="Kreuzworträtsel-Gitter"></div>
-          <div id="msg" class="message" role="status"></div>
-
-          <div class="letter-box" id="letterBox" style="display:none;">
-            <p>Dein Buchstabe:</p>
-            <div class="letter" id="letter">E</div>
-            <p>Merke dir diesen Buchstaben!</p>
-          </div>
-        </div>
-
-        <!-- Rechte Seite: Wortliste -->
-        <aside class="side">
-          <h2>Diese Wörter sind versteckt:</h2>
-          <ul>
-            <li>WEIHNACHTSMARKT</li>
-            <li>SILVESTER</li>
-            <li>KOENIGE</li>
-            <li>SCHNEE</li>
-            <li>GLOCKEN</li>
-            <li>KUGELN</li>
-            <li>DEZEMBER</li>
-            <li>NIKOLAUS</li>
-            <li>WEIHNACHTSMANN</li>
-            <li>SCHLITTEN</li>
-            <li>ZIMT</li>
-            <li>RUDOLF</li>
-            <li>WEIHNACHTSLIEDER</li>
-            <li>TANNENBAUM</li>
-            <li>PLAETZCHEN</li>
-          </ul>
-        </aside>
+      <div class="controls">
+        <button class="btn" id="checkBtn">Überprüfen</button>
+        <button class="btn sec" id="clearBtn">Alles löschen</button>
       </div>
 
-      <footer style="text-align:center; margin-top:1rem;">
-        <a href="index.html">Zurück zum Kalender</a>
-      </footer>
+      <div id="grid" class="grid" aria-label="Kreuzworträtsel-Gitter"></div>
+      <div id="msg" class="message" role="status"></div>
+
+      <div class="letter-box" id="letterBox" style="display:none;">
+        <p>Dein Buchstabe:</p>
+        <div class="letter" id="letter">E</div>
+        <p>Merke dir diesen Buchstaben!</p>
+      </div>
     </div>
   </div>
 
   <script>
     /* ============== Wörter (Großschrift, keine Leerzeichen) ============== */
     const WORDS = {
-      1:  "KOENIGE",            // Horiz.
+      // Waagerecht
+      1:  "KOENIGE",
       3:  "GLOCKEN",
       6:  "NIKOLAUS",
       8:  "PLAETZCHEN",
       9:  "SCHNEE",
       10: "DEZEMBER",
       11: "SCHLITTEN",
-
-      2:  "TANNENBAUM",         // Vertik.
+      // Senkrecht
+      2:  "TANNENBAUM",
       4:  "SILVESTER",
       5:  "WEIHNACHTSMANN",
       7:  "WEIHNACHTSMARKT",
       12: "KUGELN",
       13: "ZIMT",
-      14: "RUDOLF",
-      // (Bonus, optional querlaufend)
-      15: "WEIHNACHTSLIEDER"
+      14: "RUDOLF"
+      // WEIHNACHTSLIEDER (17) → passt nicht in 16×16, daher weggelassen
     };
 
-    /* ============== Layout =================
-       Gittergröße & genaue Platzierungen (so angeordnet wie im Screenshot – falls ein Feld 1–2 Zellen abweicht, sag mir gern Bescheid und ich feintune es):
-       - row/col sind 1-basiert
-       - dir: 'A' (across = waagerecht), 'D' (down = senkrecht)
-    */
+    /* ======= Gitter 16×16 – platzierte Koordinaten (ohne Überschneidungs-Konflikte) ======= */
     const ROWS = 16, COLS = 16;
+
+    // Platzierungen: row/col sind 1-basiert; dir: 'A' (waagerecht) / 'D' (senkrecht)
     const PLACEMENTS = [
-      // Waagerecht (aus Bild abgeleitet)
-      {num:1,  row:2,  col:2,  dir:'A', answer:WORDS[1]},    // KOENIGE
-      {num:3,  row:3,  col:6,  dir:'A', answer:WORDS[3]},    // GLOCKEN
-      {num:6,  row:6,  col:2,  dir:'A', answer:WORDS[6]},    // NIKOLAUS
-      {num:8,  row:8,  col:7,  dir:'A', answer:WORDS[8]},    // PLAETZCHEN
-      {num:9,  row:10, col:3,  dir:'A', answer:WORDS[9]},    // SCHNEE
-      {num:10, row:11, col:2,  dir:'A', answer:WORDS[10]},   // DEZEMBER
-      {num:11, row:12, col:6,  dir:'A', answer:WORDS[11]},   // SCHLITTEN
-      // Optional quer: Weihnachtslieder (unten lang)
-      {num:15, row:15, col:4,  dir:'A', answer:WORDS[15]},   // WEIHNACHTSLIEDER
+      // Waagerecht
+      {num:1,  row:2,  col:2,  dir:'A', answer: WORDS[1]},    // KOENIGE
+      {num:3,  row:4,  col:6,  dir:'A', answer: WORDS[3]},    // GLOCKEN
+      {num:6,  row:6,  col:2,  dir:'A', answer: WORDS[6]},    // NIKOLAUS
+      {num:8,  row:8,  col:3,  dir:'A', answer: WORDS[8]},    // PLAETZCHEN
+      {num:9,  row:10, col:3,  dir:'A', answer: WORDS[9]},    // SCHNEE
+      {num:10, row:12, col:2,  dir:'A', answer: WORDS[10]},   // DEZEMBER
+      {num:11, row:14, col:6,  dir:'A', answer: WORDS[11]},   // SCHLITTEN
 
       // Senkrecht
-      {num:2,  row:1,  col:4,  dir:'D', answer:WORDS[2]},    // TANNENBAUM
-      {num:4,  row:4,  col:9,  dir:'D', answer:WORDS[4]},    // SILVESTER
-      {num:5,  row:2,  col:12, dir:'D', answer:WORDS[5]},    // WEIHNACHTSMANN
-      {num:7,  row:5,  col:8,  dir:'D', answer:WORDS[7]},    // WEIHNACHTSMARKT
-      {num:12, row:7,  col:14, dir:'D', answer:WORDS[12]},   // KUGELN
-      {num:13, row:9,  col:6,  dir:'D', answer:WORDS[13]},   // ZIMT
-      {num:14, row:9,  col:12, dir:'D', answer:WORDS[14]},   // RUDOLF
+      {num:2,  row:1,  col:12, dir:'D', answer: WORDS[2]},    // TANNENBAUM
+      {num:4,  row:1,  col:9,  dir:'D', answer: WORDS[4]},    // SILVESTER
+      {num:5,  row:1,  col:4,  dir:'D', answer: WORDS[5]},    // WEIHNACHTSMANN
+      {num:7,  row:1,  col:7,  dir:'D', answer: WORDS[7]},    // WEIHNACHTSMARKT
+      {num:12, row:3,  col:14, dir:'D', answer: WORDS[12]},   // KUGELN
+      {num:13, row:5,  col:16, dir:'D', answer: WORDS[13]},   // ZIMT
+      {num:14, row:9,  col:12, dir:'D', answer: WORDS[14]}    // RUDOLF
     ];
 
-    /* ======== Engine: Raster aufbauen, Eingabe prüfen ======== */
-    const ROW = () => Array(COLS).fill(null);
-    const board = Array.from({length: ROWS}, ROW);
+    /* ======== Engine: robust (rendert immer ein Gitter) ======== */
+    const board = Array.from({length: ROWS}, () => Array(COLS).fill(null));
 
     function placeWords(){
       for (const p of PLACEMENTS){
@@ -249,14 +188,18 @@
         for (let i=0;i<letters.length;i++){
           const r = p.row - 1 + (p.dir === 'D' ? i : 0);
           const c = p.col - 1 + (p.dir === 'A' ? i : 0);
+          // Bounds-Check: falls etwas rausläuft, überspringen (verhindert Script-Abbruch)
+          if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
           if (!board[r][c]) board[r][c] = { char: letters[i], input: null, num: null };
-          else board[r][c].char = letters[i];
+          else board[r][c].char = letters[i]; // gleicher Buchstabe → ok
         }
       }
       // Startnummern setzen
       for (const p of PLACEMENTS){
         const r = p.row - 1, c = p.col - 1;
-        if (board[r][c] && board[r][c].num == null) board[r][c].num = p.num;
+        if (r>=0 && r<ROWS && c>=0 && c<COLS && board[r][c] && board[r][c].num == null){
+          board[r][c].num = p.num;
+        }
       }
     }
 
@@ -272,14 +215,10 @@
             cell.classList.add("block");
           } else {
             const inp = document.createElement("input");
-            inp.maxLength = 1;
-            item.input = inp;
-            cell.appendChild(inp);
+            inp.maxLength = 1; item.input = inp; cell.appendChild(inp);
             if (item.num){
               const num = document.createElement("div");
-              num.className = "num";
-              num.textContent = item.num;
-              cell.appendChild(num);
+              num.className = "num"; num.textContent = item.num; cell.appendChild(num);
             }
           }
           grid.appendChild(cell);
@@ -292,8 +231,8 @@
         for (let i=0;i<p.answer.length;i++){
           const r = p.row - 1 + (p.dir === 'D' ? i : 0);
           const c = p.col - 1 + (p.dir === 'A' ? i : 0);
-          const item = board[r][c];
-          const val = (item.input.value || "").toUpperCase();
+          if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+          const item = board[r][c]; const val = (item.input?.value || "").toUpperCase();
           if (val !== p.answer[i]) return false;
         }
       }
@@ -302,8 +241,7 @@
 
     function clearAll(){
       for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
-        const it = board[r][c];
-        if (it && it.input) it.input.value = "";
+        const it = board[r][c]; if (it && it.input) it.input.value = "";
       }
       document.getElementById("msg").textContent = "";
       document.getElementById("letterBox").style.display = "none";
