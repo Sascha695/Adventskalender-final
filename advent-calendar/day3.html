@@ -3,7 +3,122 @@
 <head>
   <meta charset="utf-8">
   <title>Adventskalender Tag 3</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      color: #fff;
+      text-align: center;
+      background-image: url('https://cdn.pixabay.com/photo/2017/12/17/08/40/christmas-3026688_1280.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* halbtransparenter Overlay für bessere Lesbarkeit */
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 0;
+    }
+
+    header, main, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    header h1 {
+      margin: 1rem 0;
+      font-size: 2rem;
+      color: #ffd700;
+      text-shadow: 2px 2px 6px #000;
+    }
+
+    .puzzle-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-top: 1.5rem;
+    }
+
+    .memory-card {
+      position: relative;
+      width: 100%;
+      padding-top: 100%; /* quadratische Karten */
+      perspective: 800px;
+      cursor: pointer;
+    }
+
+    .memory-card .front, .memory-card .back {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      backface-visibility: hidden;
+      transition: transform 0.4s;
+    }
+
+    .memory-card .back {
+      background: linear-gradient(135deg, #d40000, #900000);
+      border: 2px solid #fff;
+    }
+
+    .memory-card .front {
+      background-size: cover;
+      background-position: center;
+      transform: rotateY(180deg);
+    }
+
+    .memory-card.flip .front {
+      transform: rotateY(0);
+    }
+
+    .memory-card.flip .back {
+      transform: rotateY(180deg);
+    }
+
+    .letter-container {
+      margin-top: 2rem;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 1rem;
+      border-radius: 1rem;
+      color: #fff;
+    }
+
+    .letter {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #ffeb3b;
+      text-shadow: 0 0 10px #fff;
+    }
+
+    footer a {
+      color: #fff;
+      text-decoration: none;
+      display: inline-block;
+      margin: 1rem 0;
+      font-weight: bold;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -22,7 +137,6 @@
     <a href="index.html">Zurück zum Kalender</a>
   </footer>
   <script>
-    // Karten für das Memory (jeweils zweimal)
     const cards = [
       { name: 'tree', img: 'assets/tree.png' },
       { name: 'gift', img: 'assets/gift.png' },
@@ -35,20 +149,19 @@
       { name: 'kranz', img: 'assets/kranz.png' },
       { name: 'lebkuchenmann', img: 'assets/lebkuchenmann.png' },
       { name: 'raccoon', img: 'assets/raccoon.png' },
-      { name: 'santa and sledge', img: 'assets/santa_and_sledge.png' }
+      { name: 'santa and sledge', img: 'assets/santa_and_sledge.png' },
       { name: 'santa head', img: 'assets/santa_head.png' },
       { name: 'sarah and sascha', img: 'assets/sarah_sascha.png' },
       { name: 'ski couple', img: 'assets/ski_couple.png' },
-      { name: 'skis', img: 'assets/skis.png' }
+      { name: 'skis', img: 'assets/skis.png' },
       { name: 'snowflake', img: 'assets/snowflake.png' },
       { name: 'squirrel', img: 'assets/squirrel.png' },
       { name: 'sternschnuppe', img: 'assets/sternschnuppe.png' },
       { name: 'weihnachtskugeln', img: 'assets/weihnachtskugeln.png' },
       { name: 'winter fish', img: 'assets/winter_fish.png' },
       { name: 'zuckerstange', img: 'assets/zuckerstange.png' }
-    
     ];
-    // Deck verdoppeln und mischen
+
     let deck = cards.concat(cards);
     deck = deck.sort(() => Math.random() - 0.5);
     const memoryGrid = document.getElementById('memoryGrid');
@@ -56,41 +169,46 @@
     let secondCard = null;
     let lockBoard = false;
     let matches = 0;
-    deck.forEach((card, index) => {
+
+    deck.forEach((card) => {
       const cardElement = document.createElement('div');
       cardElement.classList.add('memory-card');
       cardElement.dataset.name = card.name;
-      // Rückseite
+
       const back = document.createElement('div');
       back.classList.add('back');
-      // Vorderseite
+
       const front = document.createElement('div');
       front.classList.add('front');
       front.style.backgroundImage = `url('${card.img}')`;
+
       cardElement.appendChild(back);
       cardElement.appendChild(front);
+
       cardElement.addEventListener('click', () => {
         if (lockBoard) return;
         if (cardElement.classList.contains('matched')) return;
+
         cardElement.classList.add('flip');
         if (!firstCard) {
           firstCard = cardElement;
           return;
         }
+
         if (firstCard === cardElement) return;
         secondCard = cardElement;
         lockBoard = true;
-        // Prüfen ob gleiche Karten
+
         if (firstCard.dataset.name === secondCard.dataset.name) {
           firstCard.classList.add('matched');
           secondCard.classList.add('matched');
           matches++;
           resetBoard();
+
           if (matches === cards.length) {
             showLetter('H');
           }
         } else {
-          // Nach kurzer Zeit wieder umdrehen
           setTimeout(() => {
             firstCard.classList.remove('flip');
             secondCard.classList.remove('flip');
@@ -98,11 +216,14 @@
           }, 700);
         }
       });
+
       memoryGrid.appendChild(cardElement);
     });
+
     function resetBoard() {
       [firstCard, secondCard, lockBoard] = [null, null, false];
     }
+
     function showLetter(letter) {
       const container = document.getElementById('letter-container');
       document.getElementById('letter').textContent = letter;
@@ -111,3 +232,4 @@
   </script>
 </body>
 </html>
+
