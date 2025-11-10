@@ -127,6 +127,28 @@
   (function tryNext(i=0){
     if (i >= candidates.length) {
       console.warn('Kein Bild gefunden. Getestet:', candidates);
+      <img id="wimmel"
+     alt="Weihnachtliches Wimmelbild"
+     data-name="tag2_wimmelbild"
+     data-exts="jpg,jpeg,png,webp"
+     data-dirs=".,images,assets,assets/images,../images,../assets,../assets/images,../../images,../../assets,../../assets/images">
+
+<script>
+(function () {
+  const img = document.getElementById('wimmel');
+  if (!img) return;                     // safety guard
+
+  const base = img.getAttribute('data-name') || 'wimmelbild';
+  const exts = (img.getAttribute('data-exts') || 'jpg,jpeg,png,webp').split(',');
+  const dirs = (img.getAttribute('data-dirs') || '.,images').split(',');
+
+  const names = base.includes('.') ? [base] : exts.flatMap(e => [base + '.' + e, base.toLowerCase() + '.' + e]);
+  const candidates = [];
+  dirs.forEach(d => names.forEach(n => candidates.push((d === '.' ? '' : (d.replace(/\/?$/, '/') )) + n)));
+
+  (function tryNext(i=0){
+    if (i >= candidates.length) {
+      console.warn('Kein Bild gefunden. Getestet:', candidates);
       img.insertAdjacentHTML('afterend',
         '<div style="margin:.6rem 0;padding:.6rem .8rem;border-radius:8px;background:#fee;color:#b91c1c;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.12)">' +
         'Bild nicht gefunden. Getestete Pfade:<br><small>'+candidates.join('<br>')+'</small></div>');
@@ -134,7 +156,7 @@
     }
     const url = candidates[i];
     const test = new Image();
-    test.onload = () => { img.src = url; /* optional: console.log('Bild gefunden:', url); */ };
+    test.onload  = () => { img.src = url; };
     test.onerror = () => tryNext(i+1);
     test.src = url;
   })();
