@@ -90,7 +90,7 @@
       padding: 6px;
       border-radius: 12px;
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
-      overflow: auto; max-height: 70vh;
+      overflow: auto; max-height: 60vh;
     }
     .cell { position: relative; background:#fff; border-radius:4px; display:grid; place-items:center; font-weight:700; }
     .cell.block{ background:#1f2937; }
@@ -106,6 +106,13 @@
       display:inline-block; font-weight:900; font-size:clamp(2rem, 6vw, 3.5rem);
       padding:.35rem 1rem; border-radius:14px; background:#0ea5e9; color:#fff; box-shadow:0 6px 14px rgba(14,165,233,.35);
     }
+
+    /* Hinweise */
+    .clues { margin-top: 1.25rem; display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 720px){ .clues{ grid-template-columns: 1fr; } }
+    .clues h3{ margin:.4rem 0; }
+    .clues ol{ margin:.2rem 0 .8rem 1.25rem; }
+    .clues li{ margin:.25rem 0; }
   </style>
 </head>
 <body>
@@ -130,11 +137,39 @@
         <div class="letter" id="letter">E</div>
         <p>Merke dir diesen Buchstaben!</p>
       </div>
+
+      <!-- Lösungshinweise -->
+      <section class="clues">
+        <div>
+          <h3>Waagerecht</h3>
+          <ol>
+            <li value="1">Die Heiligen drei …</li>                      <!-- KOENIGE -->
+            <li value="3">Was läutet zu Weihnachten?</li>               <!-- GLOCKEN -->
+            <li value="6">Wer kommt am 6. Dezember?</li>                <!-- NIKOLAUS -->
+            <li value="8">Ein weihnachtliches Gebäck.</li>              <!-- PLAETZCHEN -->
+            <li value="9">Was macht draußen alles zauberhaft weiß?</li> <!-- SCHNEE -->
+            <li value="10">Wie heißt der letzte Monat im Jahr?</li>     <!-- DEZEMBER -->
+            <li value="11">Was braucht man zum Rodeln?</li>             <!-- SCHLITTEN -->
+          </ol>
+        </div>
+        <div>
+          <h3>Senkrecht</h3>
+          <ol>
+            <li value="2">Welches Wort fehlt im Liedtext: „Oh …, oh …, wie grün sind deine Blätter?“</li> <!-- TANNENBAUM -->
+            <li value="4">Wie heißt das Fest direkt nach Weihnachten?</li>                                 <!-- SILVESTER -->
+            <li value="5">Wer bringt an Heiligabend die Geschenke?</li>                                    <!-- WEIHNACHTSMANN -->
+            <li value="7">Wie heißt der Markt, auf dem man in der Weihnachtszeit bummeln kann?</li>        <!-- WEIHNACHTSMARKT -->
+            <li value="12">Was hängt am Weihnachtsbaum?</li>                                                <!-- KUGELN -->
+            <li value="13">Duftendes Gewürz, typisch für die Weihnachtsbäckerei.</li>                      <!-- ZIMT -->
+            <li value="14">Wie heißt das Rentier mit der roten Nase?</li>                                   <!-- RUDOLF -->
+          </ol>
+        </div>
+      </section>
     </div>
   </div>
 
   <script>
-    /* ============== Wörter (Großschrift, keine Leerzeichen) ============== */
+    /* ====== Wörter (Großschrift, keine Leerzeichen) ====== */
     const WORDS = {
       // Waagerecht
       1:  "KOENIGE",
@@ -152,34 +187,30 @@
       12: "KUGELN",
       13: "ZIMT",
       14: "RUDOLF"
-      // WEIHNACHTSLIEDER (17) → passt nicht in 16×16, daher weggelassen
     };
 
-    /* ======= Gitter 16×16 – platzierte Koordinaten (ohne Überschneidungs-Konflikte) ======= */
+    /* ====== Gitter 16×16 – Koordinaten ====== */
     const ROWS = 16, COLS = 16;
-
-    // Platzierungen: row/col sind 1-basiert; dir: 'A' (waagerecht) / 'D' (senkrecht)
     const PLACEMENTS = [
       // Waagerecht
-      {num:1,  row:2,  col:2,  dir:'A', answer: WORDS[1]},    // KOENIGE
-      {num:3,  row:4,  col:6,  dir:'A', answer: WORDS[3]},    // GLOCKEN
-      {num:6,  row:6,  col:2,  dir:'A', answer: WORDS[6]},    // NIKOLAUS
-      {num:8,  row:8,  col:3,  dir:'A', answer: WORDS[8]},    // PLAETZCHEN
-      {num:9,  row:10, col:3,  dir:'A', answer: WORDS[9]},    // SCHNEE
-      {num:10, row:12, col:2,  dir:'A', answer: WORDS[10]},   // DEZEMBER
-      {num:11, row:14, col:6,  dir:'A', answer: WORDS[11]},   // SCHLITTEN
-
+      {num:1,  row:2,  col:2,  dir:'A', answer: WORDS[1]},
+      {num:3,  row:4,  col:6,  dir:'A', answer: WORDS[3]},
+      {num:6,  row:6,  col:2,  dir:'A', answer: WORDS[6]},
+      {num:8,  row:8,  col:3,  dir:'A', answer: WORDS[8]},
+      {num:9,  row:10, col:3,  dir:'A', answer: WORDS[9]},
+      {num:10, row:12, col:2,  dir:'A', answer: WORDS[10]},
+      {num:11, row:14, col:6,  dir:'A', answer: WORDS[11]},
       // Senkrecht
-      {num:2,  row:1,  col:12, dir:'D', answer: WORDS[2]},    // TANNENBAUM
-      {num:4,  row:1,  col:9,  dir:'D', answer: WORDS[4]},    // SILVESTER
-      {num:5,  row:1,  col:4,  dir:'D', answer: WORDS[5]},    // WEIHNACHTSMANN
-      {num:7,  row:1,  col:7,  dir:'D', answer: WORDS[7]},    // WEIHNACHTSMARKT
-      {num:12, row:3,  col:14, dir:'D', answer: WORDS[12]},   // KUGELN
-      {num:13, row:5,  col:16, dir:'D', answer: WORDS[13]},   // ZIMT
-      {num:14, row:9,  col:12, dir:'D', answer: WORDS[14]}    // RUDOLF
+      {num:2,  row:1,  col:12, dir:'D', answer: WORDS[2]},
+      {num:4,  row:1,  col:9,  dir:'D', answer: WORDS[4]},
+      {num:5,  row:1,  col:4,  dir:'D', answer: WORDS[5]},
+      {num:7,  row:1,  col:7,  dir:'D', answer: WORDS[7]},
+      {num:12, row:3,  col:14, dir:'D', answer: WORDS[12]},
+      {num:13, row:5,  col:16, dir:'D', answer: WORDS[13]},
+      {num:14, row:9,  col:12, dir:'D', answer: WORDS[14]}
     ];
 
-    /* ======== Engine: robust (rendert immer ein Gitter) ======== */
+    /* ======== Engine ======== */
     const board = Array.from({length: ROWS}, () => Array(COLS).fill(null));
 
     function placeWords(){
@@ -188,13 +219,11 @@
         for (let i=0;i<letters.length;i++){
           const r = p.row - 1 + (p.dir === 'D' ? i : 0);
           const c = p.col - 1 + (p.dir === 'A' ? i : 0);
-          // Bounds-Check: falls etwas rausläuft, überspringen (verhindert Script-Abbruch)
           if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
           if (!board[r][c]) board[r][c] = { char: letters[i], input: null, num: null };
-          else board[r][c].char = letters[i]; // gleicher Buchstabe → ok
+          else board[r][c].char = letters[i];
         }
       }
-      // Startnummern setzen
       for (const p of PLACEMENTS){
         const r = p.row - 1, c = p.col - 1;
         if (r>=0 && r<ROWS && c>=0 && c<COLS && board[r][c] && board[r][c].num == null){
@@ -258,11 +287,10 @@
       } else {
         msg.textContent = "";
         document.getElementById("letterBox").style.display = "block";
-        document.getElementById("letter").textContent = "E"; // ← Buchstabe des Tages
+        document.getElementById("letter").textContent = "E";
       }
     });
     document.getElementById("clearBtn").addEventListener("click", clearAll);
   </script>
 </body>
 </html>
-
