@@ -77,10 +77,18 @@
       </div>
 
       <div>
-        <p>3. In welcher Stadt steht der größte Weihnachtsbaum Deutschlands traditionell?</p>
-        <label><input type="radio" name="q3" value="Berlin"> Berlin</label><br>
-        <label><input type="radio" name="q3" value="Dortmund"> Dortmund</label><br>
-        <label><input type="radio" name="q3" value="München"> München</label>
+        <p>3. Welche Farbe hatte der Weihnachtsmann ursprünglich, bevor er durch eine berühmte Werbekampagne rot wurde?</p>
+        <label><input type="radio" name="q3" value="Weiß"> Weiß</label><br>
+        <label><input type="radio" name="q3" value="Braun"> Braun</label><br>
+        <label><input type="radio" name="q3" value="Grün"> Grün</label><br>
+        <label><input type="radio" name="q3" value="Gelb"> Gelb</label>
+      </div>
+       <div>
+        <p>4. „Feliz Navidad“ heißt übersetzt „Frohe Weihnachten“ in welcher Sprache?</p>
+        <label><input type="radio" name="q3" value="Kroatisch"> Kroatisch</label><br>
+        <label><input type="radio" name="q3" value="Portugiesisch"> Portugiesisch</label><br>
+        <label><input type="radio" name="q3" value="Italienisch"> Italienisch</label><br>
+        <label><input type="radio" name="q3" value="Spanisch"> Spanisch</label>
       </div>
 
       <button type="button" onclick="checkQuiz()">Überprüfen</button>
@@ -129,7 +137,8 @@
       const answers = {
         q1: 'vier',
         q2: 'Rentier',
-        q3: 'Dortmund'
+        q3: 'Grün',
+        q4: 'Spanisch'
       };
 
       for (let key in answers) {
