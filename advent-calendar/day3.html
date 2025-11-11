@@ -16,6 +16,30 @@
       position: relative;
       min-height: 100vh;
     }
+    <script>
+  // VOR dem Erstellen der Karten einfügen
+  function preloadImages(list) {
+    return Promise.all(list.map(({img, name}) =>
+      new Promise((resolve) => {
+        const i = new Image();
+        i.onload = () => resolve({ok: true, img, name});
+        i.onerror = () => resolve({ok: false, img, name});
+        i.src = img;
+      })
+    ));
+  }
+
+  preloadImages(cards).then(results => {
+    const missing = results.filter(r => !r.ok);
+    if (missing.length) {
+      console.group('Fehlende/fehlerhafte Bildpfade');
+      missing.forEach(r => console.warn(`FEHLT: ${r.img} (${r.name})`));
+      console.groupEnd();
+    } else {
+      console.info('Alle Kartenbilder geladen ✅');
+    }
+  });
+</script>
 
     /* halbtransparenter Overlay für bessere Lesbarkeit */
     body::before {
