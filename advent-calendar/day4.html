@@ -148,6 +148,13 @@ main.puzzle-container {
       <label><input type="radio" name="q8" value="Man bringt den ertsten Christbaumschmuck an"> Man bringt den ertsten Christbaumschmuck an</label><br>
     </div>
 
+     <p>9. „Wann wird in Spanien traditionell Weihnachten gefeiert?</p>
+      <label><input type="radio" name="q9" value="Am 24. Dezember"> Am 24.Dezember (Nochebuena)</label><br>
+      <label><input type="radio" name="q9" value="Am 25. Dezember"> Am 25. Dezember</label><br>
+      <label><input type="radio" name="q9" value="Am 6. Januar"> Am 6. Januar</label><br>
+      <label><input type="radio" name="q9" value="Am 31. Dezember"> Am 31. Dezember </label><br>
+    </div>
+
     <button type="button" onclick="checkQuiz()">Überprüfen</button>
   </form>
 
@@ -197,7 +204,8 @@ function checkQuiz() {
     q5: 'Charles Dickens',
     q6: 'Ebenezer Scrooge',
     q7: 'Heilige Barbara',
-    q8: 'Man stellt den Zweig eines Obstbaumes ins Wasser, der bis Weihnachten Blühen soll'
+    q8: 'Man stellt den Zweig eines Obstbaumes ins Wasser, der bis Weihnachten Blühen soll',
+    q9: 'Am 6. Januar'
   };
 
   for (let key in answers) {
