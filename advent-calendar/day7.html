@@ -172,6 +172,38 @@
     @media (prefers-reduced-motion: reduce){
       .confetti-letter{ animation: none; top:auto; bottom:4vh; opacity:.7; }
     }
+
+    /* Alles schön mittig ausrichten */
+main{
+  display:flex;
+  flex-direction:column;
+  align-items:center;        /* zentriert den gesamten Inhalt in <main> */
+}
+
+/* Das 2-Spalten-Layout selbst mittig anordnen */
+.wrap{
+  justify-content:center;    /* zentriert die Grid-Spalten im Container */
+  justify-items:center;      /* Karten in ihrer Spalte zentrieren */
+}
+
+/* Das Letter-Grid in seiner Karte zentrieren */
+.grid{
+  margin-inline:auto;        /* Grid selbst zentrieren */
+}
+
+/* Damit Bilder-Karte die gleiche Breite wie das Grid hat (mobil) */
+.pics{
+  width:min(92vw,520px);
+}
+
+/* Nur die erste Karte (mit dem Grid) als Flex-Box,
+   damit ihr Inhalt (das Grid) sauber mittig sitzt */
+.wrap > .card:first-child{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
   </style>
 </head>
 <body>
