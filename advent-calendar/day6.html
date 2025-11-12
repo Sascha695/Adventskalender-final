@@ -6,10 +6,10 @@
 <title>6. Dezember – Nikolaus im harten Labyrinth</title>
 <style>
   :root{
-    --cell: 22px;      /* wird per JS dynamisch gesetzt */
+    --cell: 22px;
     --gap: 2px;
     --cols: 10;
-    --wall:#0f172a;     /* Wände */
+    --wall:#0f172a;
     --path:#ffffff;     /* besuchte Wege */
     --path-dim:#cbd5e1; /* graue Wege (im Sichtkegel, unbesucht) */
     --forest:#166534;   /* Außenwald */
@@ -28,12 +28,16 @@
   .bg-overlay{ position:fixed; inset:0; pointer-events:none; background:linear-gradient(0deg, rgba(0,0,0,.16), rgba(0,0,0,.16)); z-index:-1; }
 
   header,footer{padding:10px 8px; text-align:center}
-  h1{margin:0 0 6px; font-size:1.15rem}
+  h1{margin:0 0 6px; font-size:1.1rem}
   .sub{opacity:.9; font-size:.95rem}
+  .intro{
+    margin:8px auto 0; max-width:800px; padding:8px 10px;
+    background:#fff; border:1px solid #dbe2ea; border-radius:10px; line-height:1.35;
+  }
 
   .wrap{display:grid; place-items:center; padding:8px; gap:8px}
   .bar{display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap}
-  .bar button, .bar .toggle{
+  .bar button{
     padding:8px 12px; border-radius:10px; border:1px solid #b8c1cc; background:#fff; font:inherit; cursor:pointer;
   }
 
@@ -41,7 +45,7 @@
     padding:6px; border-radius:14px; background:rgba(255,255,255,.65);
     box-shadow:0 10px 28px rgba(0,0,0,.18), inset 0 0 0 2px var(--grid-outline);
     max-width:100vw;
-    max-height:calc(100vh - 220px); /* mehr Platz fürs Grid auf dem Handy */
+    max-height:calc(100vh - 220px);
     overflow:auto;
   }
 
@@ -50,7 +54,7 @@
     grid-template-columns:repeat(var(--cols), var(--cell));
     grid-auto-rows:var(--cell);
     gap:var(--gap);
-    /* Wichtig: Vertikales Page-Scroll zulassen */
+    /* Vertikales Seiten-Scrollen erlauben */
     touch-action: pan-y;
     outline:2px solid var(--grid-outline);
     outline-offset:4px;
@@ -81,7 +85,6 @@
     pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,.35);
   }
   .sprite.emoji{ font-size:calc(var(--cell) * var(--player-scale)*0.9); }
-
   .goal-sprite{
     position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%);
     width:calc(var(--cell) * var(--goal-scale)); height:calc(var(--cell) * var(--goal-scale));
@@ -91,15 +94,16 @@
   /* Fog of War – ungesehene Zellen komplett verbergen (außer FOREST) */
   .fog{
     position:relative;
-    background:#0b1220 !important;   /* einheitlich dunkel */
+    background:#0b1220 !important;
     box-shadow:none !important;
   }
   .fog::after{ display:none; }
   .fog > * { display:none !important; }
 
-  .win{display:none; padding:10px 14px; background:#fff3cd; border:1px solid #ffe08a; border-radius:10px;}
+  .hint{
+    font-size:.9rem; opacity:.9; margin:2px 0 0; text-align:center;
+  }
 
-  /* D-Pad kompakter für Handy */
   .controls{
     display:grid;
     grid-template-areas:
@@ -126,18 +130,27 @@
 <header>
   <h1>6. Dezember – Nikolaus im harten Labyrinth</h1>
   <div class="sub">Langer Umweg ums Haus, viele Sackgassen. Außenwald bleibt sichtbar.</div>
+  <p class="intro">„Von draußen vom Walde, da komme ich her, aber ich habe leider den Weg zur Eichbühlstraße vergessen. Kannst du mir zeigen, wie ich zu deinem Haus komme?“</p>
 </header>
 
 <main class="wrap">
+  <!-- Obere Leiste: nur Neu erzeugen -->
   <div class="bar">
     <button id="regen">Neu erzeugen</button>
-    <button id="fogToggle" class="toggle" aria-pressed="true">Sichtfeld: AN</button>
   </div>
 
+  <!-- Spielfeld -->
   <div class="frame" id="frame">
     <div id="maze" class="maze" aria-label="Labyrinth" role="grid" tabindex="0"></div>
   </div>
 
+  <!-- Hinweis und Taschenlampen-Knopf UNTER dem Spielfeld -->
+  <p class="hint">Falls es zu schwer ist, dann ist hier eine Taschenlampe:</p>
+  <div class="bar">
+    <button id="fogToggle" class="toggle" aria-pressed="false">Sichtfeld AN</button>
+  </div>
+
+  <!-- D-Pad -->
   <div class="controls" aria-label="Pfeiltasten">
     <button class="btn up"    aria-label="Nach oben">▲</button>
     <button class="btn left"  aria-label="Nach links">◀</button>
@@ -146,7 +159,7 @@
     <button class="btn down"  aria-label="Nach unten">▼</button>
   </div>
 
-  <div class="win" id="win">Geschafft! Merke dir den Buchstaben: <strong id="letter">N</strong></div>
+  <div class="win" id="win" style="display:none">Geschafft! Merke dir den Buchstaben: <strong id="letter">N</strong></div>
 </main>
 
 <footer><p><a href="index.html">Zurück zum Kalender</a></p></footer>
@@ -163,15 +176,17 @@ if (backgroundImageURL){
 
 /* ==== Parameter ==== */
 const FOREST=2, WALL=1, PATH=0;
-/* handygerecht, aber knifflig */
-const SIZE = 29;
+const SIZE = 29;          /* handygerecht */
 let GRID = 0;
 let grid, position, goal;
 
-let fogEnabled = true;   // true = Fog aktiv
-const FOG_RADIUS = 2;    // Sichtkegel
+/* Sichtfelder:
+   - lampOn = „Sichtfeld AN“ -> ALLES sichtbar (Fog komplett aus)
+   - lampOn = false          -> Fog aktiv mit Sichtkegel
+*/
+let lampOn = false;       // Button startet AUS (dann Fog aktiv)
+const FOG_RADIUS = 2;
 
-/* Sichtbarkeits-Speicher */
 let visited;
 
 /* DOM */
@@ -188,10 +203,10 @@ const rightBtn = document.querySelector('.right');
 
 regenBtn.addEventListener('click', generateAndDraw);
 fogBtn.addEventListener('click', () => {
-  // Toggle: AN -> AUS (alles sichtbar), AUS -> AN (Fog aktiv)
-  fogEnabled = !fogEnabled;
-  fogBtn.textContent = `Sichtfeld: ${fogEnabled ? 'AN' : 'AUS'}`;
-  fogBtn.setAttribute('aria-pressed', String(fogEnabled));
+  lampOn = !lampOn;
+  // UI: Wenn AN -> kompletter Überblick
+  fogBtn.textContent = lampOn ? 'Sichtfeld AUS' : 'Sichtfeld AN';
+  fogBtn.setAttribute('aria-pressed', String(lampOn));
   draw();
 });
 window.addEventListener('resize', ()=>fitCellSize(true));
@@ -218,7 +233,7 @@ function generateAndDraw(){
   // 4) Kürzester Weg (durch das Süd-Tor erzwungen)
   const solutionPath = shortestPath(carve, entranceInner, mid);
 
-  // 5) Mehr Sackgassen: deutlich höher & länger + Neben-Sackgassen
+  // 5) Viele und lange Sackgassen + Nebenäste
   const pruned = pruneToSolutionWithDecoys(
     carve,
     solutionPath,
@@ -304,16 +319,13 @@ function addMoatAroundCenter(carve, center, gateDir='S'){
   const R=carve.length, C=carve[0].length;
   const inB=(r,c)=> r>=0 && c>=0 && r<R && c<C;
   const ring = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-  // ring zu Wänden machen
   for (const [dr,dc] of ring){
     const rr=center.r+dr, cc=center.c+dc;
     if (inB(rr,cc)) carve[rr][cc]=WALL;
   }
-  // Tor öffnen
   const gates = {N:[-1,0],S:[1,0],E:[0,1],W:[0,-1]};
   const [gr, gc] = [center.r + gates[gateDir][0], center.c + gates[gateDir][1]];
   if (inB(gr,gc)) carve[gr][gc]=PATH;
-  // Zielzelle selbst begehbar lassen
   if (inB(center.r, center.c)) carve[center.r][center.c]=PATH;
   return carve;
 }
@@ -378,7 +390,7 @@ function pruneToSolutionWithDecoys(
     let pr=sr, pc=sc, len = 1 + Math.floor(Math.random()*maxLen);
     while (len>0 && pr>0 && pc>0 && pr<R-1 && pc<C-1 && carve[pr][pc]===WALL){
       carve[pr][pc]=PATH;
-      // evtl. Nebenast abzweigen
+      // Nebenast abzweigen
       if (sideBranchChance>0 && Math.random()<sideBranchChance){
         const ortho = (dr===0) ? [[1,0],[-1,0]] : [[0,1],[0,-1]];
         const [sdr,sdc] = ortho[Math.random()<0.5?0:1];
@@ -452,7 +464,6 @@ function fitCellSize(onlySize){
   const cellByW = Math.floor(availW / cols) - 1;
   const cellByH = Math.floor(availH / cols) - 1;
 
-  /* kleinere Zellen erzwingen: max ~22px, min ~10px */
   const cell = Math.max(10, Math.min(22, Math.min(cellByW, cellByH)));
   const gap  = cell < 16 ? 1 : 2;
 
@@ -463,7 +474,7 @@ function fitCellSize(onlySize){
   if (!onlySize && GRID){ draw(); }
 }
 
-/* ==== Render (mit Fog) ==== */
+/* ==== Render ==== */
 function draw(){
   const { seenEver, fringeNow } = computeVisibilityStates();
   mazeEl.innerHTML = '';
@@ -500,13 +511,15 @@ function draw(){
         cell.classList.add('player'); cell.tabIndex = 0; cell.appendChild(s);
       }
 
-      // Fog-Logik
-      if (fogEnabled){
+      // Fog-Logik:
+      // - lampOn (Sichtfeld AN) => ALLES sichtbar, keine Dim-/Fog-Klassen
+      // - lampOff (Sichtfeld AUS) => Fog aktiv mit grauem Sichtkegel
+      if (!lampOn){
         if (!seenEver[r][c]) {
           if (v !== FOREST) cell.classList.add('fog'); // Forest NIE verdunkeln
         } else if (fringeNow[r][c]) {
           if (v===PATH || (r===goal.r && c===goal.c)){
-            cell.classList.add('dim'); // graue Vorschau im Sichtkegel
+            cell.classList.add('dim');
           }
         }
       }
@@ -522,7 +535,13 @@ function computeVisibilityStates(){
   const seenEver = Array.from({length:GRID},()=>Array(GRID).fill(false));
   const fringeNow = Array.from({length:GRID},()=>Array(GRID).fill(false));
 
-  // schon besuchte Felder sind "gesehen"
+  // lampOn: alles sichtbar
+  if (lampOn){
+    for (let r=0;r<GRID;r++) for (let c=0;c<GRID;c++) seenEver[r][c]=true;
+    return { seenEver, fringeNow };
+  }
+
+  // bereits besuchte Felder sind "gesehen"
   if (visited){
     for (const key of visited){
       const [r,c] = key.split(',').map(Number);
@@ -530,22 +549,14 @@ function computeVisibilityStates(){
     }
   }
 
-  // Fog AUS -> alles sichtbar
-  if (!fogEnabled){
-    for (let r=0;r<GRID;r++) for (let c=0;c<GRID;c++) seenEver[r][c]=true;
-    return { seenEver, fringeNow };
-  }
-
-  // Fog AN: Sichtkegel
+  // Sichtkegel
   const R = position.r, C = position.c;
   for (let r=R-FOG_RADIUS; r<=R+FOG_RADIUS; r++){
     for (let c=C-FOG_RADIUS; c<=C+FOG_RADIUS; c++){
       if (r>=0 && c>=0 && r<GRID && c<GRID){
         if (Math.max(Math.abs(r-R), Math.abs(c-C)) <= FOG_RADIUS){
-          if (!visited.has(`${r},${c}`)){
-            fringeNow[r][c] = true;   // im Sichtkegel, aber unbesucht
-          }
-          seenEver[r][c] = true;      // jetzt gesehen zählt als gesehen
+          if (!visited.has(`${r},${c}`)) fringeNow[r][c] = true;
+          seenEver[r][c] = true;
         }
       }
     }
@@ -558,7 +569,7 @@ function focusPlayer(){
   if (p) p.focus({preventScroll:true});
 }
 
-/* ==== Bewegung & Win ==== */
+/* Bewegung & Win */
 function canMove(r,c){ return !(r<0||c<0||r>=GRID||c>=GRID) && grid[r][c]!==WALL; }
 function move(dr,dc){
   const nr=position.r+dr, nc=position.c+dc;
@@ -573,7 +584,7 @@ function move(dr,dc){
   }
 }
 
-/* ==== Controls ==== */
+/* Tastatur */
 function keyHandler(e){
   const k=e.key.toLowerCase();
   if(['arrowup','w'].includes(k)) move(-1,0);
@@ -582,31 +593,22 @@ function keyHandler(e){
   else if(['arrowright','d'].includes(k)) move(0,1);
 }
 
-/* Touch – vertikales Scrollen zulassen:
-   - Wir verhindern nur bei klaren Wischgesten (kurz & deutlich) das Scrollen
-   - Horizontaler Wisch -> bewegen; vertikaler Wisch -> Seite scrollt
-*/
+/* Touch – vertikales Scrollen zulassen; horizontale Wischgeste bewegt die Figur */
 let sx=0, sy=0, st=0;
 const SWIPE_MIN=22, SWIPE_MAXT=600;
 function onTouchStart(e){
   if (!e.touches || e.touches.length!==1) return;
   sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now();
 }
-function onTouchMove(e){
-  // nichts verhindern -> pan-y bleibt aktiv
-}
+function onTouchMove(e){ /* kein preventDefault -> pan-y erlaubt */ }
 function onTouchEnd(e){
   const dt=Date.now()-st; if(dt>SWIPE_MAXT) return;
   const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
   const dx=t.clientX-sx, dy=t.clientY-sy;
   if (Math.max(Math.abs(dx),Math.abs(dy))<SWIPE_MIN) return;
-
-  // Nur wenn horizontale Geste dominiert, bewegen wir die Figur.
   if (Math.abs(dx)>Math.abs(dy)){
     if (dx>0) move(0, 1); else move(0, -1);
-    e.preventDefault(); // nur hier blocken, damit die Seite nicht mitscrollt
-  } else {
-    // vertikal -> Seite scrollt; keine Aktion
+    e.preventDefault(); // nur horizontales Wischen blockt Scrollen
   }
 }
 
@@ -630,6 +632,7 @@ function detachControls(){
 </script>
 </body>
 </html>
+
 
 
 
