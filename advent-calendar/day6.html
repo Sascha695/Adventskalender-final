@@ -1,92 +1,363 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <title>Adventskalender Tag 7</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>6. Dezember – Nikolaus im Labyrinth</title>
   <style>
-    #maze-container {
-      margin-top: 20px;
+    :root{
+      --cell: min(7vw, 36px);     /* Zellgröße automatisch für Handy/Laptop */
+      --gap: 2px;                  /* Abstand zwischen Zellen */
+      --wall: #243447;             /* Wände */
+      --path: #ecf0f1;             /* Wege */
+      --forest: #2e7d32;           /* Wald */
+      --house: #ffd54f;            /* Gelbes Haus */
+      --player: #e53935;           /* Akzent für Fokus */
     }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      color: #111;
+      background:
+        radial-gradient(1200px 600px at -10% -10%, rgba(46,125,50,.5), transparent 60%),
+        radial-gradient(1000px 800px at 110% 110%, rgba(46,125,50,.4), transparent 60%),
+        #f5f7fa;
+    }
+
+    header, footer {
+      text-align: center;
+      padding: 16px 12px;
+    }
+    header h1 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+    .sub { margin-top: 6px; color: #333 }
+
+    .wrapper {
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+
+    /* Wald-Rahmen rund ums Labyrinth */
+    .forest-frame {
+      padding: clamp(10px, 2vw, 16px);
+      background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 10px, rgba(0,0,0,.05) 10px 20px),
+        radial-gradient(circle at 20% 30%, #3a9d40 0 40%, #2e7d32 60% 100%);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+
+    /* Grid des Labyrinths inkl. äußerem Wald-Ring */
+    .maze {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cell));
+      grid-auto-rows: var(--cell);
+      gap: var(--gap);
+      background: rgba(255,255,255,.55);
+      padding: var(--gap);
+      border-radius: 14px;
+      backdrop-filter: blur(3px);
+    }
+
+    .cell {
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--cell) * 0.6);
+      user-select: none;
+    }
+
+    .wall   { background: var(--wall); }
+    .path   { background: var(--path); }
+    .forest { background: var(--forest); color: #fff; }
+    .goal   { background: var(--house); position: relative; }
+
+    .goal::after{
+      content: "🏠";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--cell) * 0.6);
+    }
+
+    .player{
+      position: relative;
+      outline: 2px solid transparent;
+    }
+    .player::after{
+      content: "🎅";
+    }
+    .player:focus-visible{
+      outline: 2px solid var(--player);
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+
+    /* HUD / Steuerung */
+    .hud{
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      justify-items: center;
+    }
+    .legend{
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 10px;
+      align-items: center;
+      background: rgba(255,255,255,.7);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
+    .legend .dot{ width: 14px; height: 14px; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+
+    /* On-Screen-DPad (für Handy) */
+    .dpad {
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left center right"
+        ". down .";
+      gap: 8px;
+      touch-action: manipulation;
+    }
+
+    .btn {
+      grid-area: center;
+      width: 56px; height: 56px;
+      border-radius: 12px;
+      border: none;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.12);
+      font-size: 24px;
+    }
+    .btn:active { transform: translateY(1px); }
+
+    .btn.up    { grid-area: up;    }
+    .btn.down  { grid-area: down;  }
+    .btn.left  { grid-area: left;  }
+    .btn.right { grid-area: right; }
+
+    /* Responsives Tuning */
+    @media (min-width: 1000px){
+      :root{ --cell: 40px; }
+    }
+
+    /* Erfolgsbanner */
+    .win {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: #fff3cd;
+      border: 1px solid #ffe08a;
+      border-radius: 10px;
+      display: none;
+    }
+
+    a { color: #0b5cab; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Tag&nbsp;7 – Labyrinth</h1>
+    <h1>6. Dezember – Nikolaus im Labyrinth</h1>
+    <div class="sub">Bringe den Nikolaus 🎅 vom Wald zum gelben Haus 🏠 in der Mitte.</div>
   </header>
-  <main class="puzzle-container">
-    <p>Finde den Weg durch das Labyrinth. Benutze die Pfeiltasten, um den blauen Punkt zum grünen Ziel zu bewegen.</p>
-    <div id="maze-container"></div>
-    <div id="letter-container" class="letter-container" style="display:none;">
-      <p>Dein Buchstabe:</p>
-      <div class="letter" id="letter"></div>
-      <p>Merke dir diesen Buchstaben!</p>
+
+  <main class="wrapper">
+    <div class="forest-frame">
+      <div id="maze" class="maze" aria-label="Labyrinth" role="grid" tabindex="0"></div>
+    </div>
+
+    <div class="hud">
+      <div class="legend" aria-hidden="true">
+        <span><span class="dot" style="background: var(--forest)"></span>Wald</span>
+        <span><span class="dot" style="background: var(--path)"></span>Weg</span>
+        <span><span class="dot" style="background: var(--wall)"></span>Wand</span>
+        <span><span class="dot" style="background: var(--house)"></span>Ziel</span>
+        <span>🎅 Du</span>
+      </div>
+
+      <!-- On-Screen Steuerkreuz (nur sichtbar auf kleineren Screens) -->
+      <div class="dpad" id="dpad" aria-label="Steuerkreuz">
+        <button class="btn up"    aria-label="Nach oben">▲</button>
+        <button class="btn left"  aria-label="Nach links">◀</button>
+        <button class="btn"       aria-label="Zentrum" disabled>🎅</button>
+        <button class="btn right" aria-label="Nach rechts">▶</button>
+        <button class="btn down"  aria-label="Nach unten">▼</button>
+      </div>
+
+      <div class="win" id="win">Geschafft! Merke dir den Buchstaben: <strong id="letter">N</strong></div>
     </div>
   </main>
+
   <footer>
-    <a href="index.html">Zurück zum Kalender</a>
+    <p style="text-align:center"><a href="index.html">Zurück zum Kalender</a></p>
   </footer>
+
   <script>
-    const maze = [
-      [0,1,0,0,1,0,0],
-      [0,1,0,1,0,1,0],
-      [0,1,0,1,0,1,0],
-      [0,0,0,0,0,1,0],
-      [1,1,1,1,0,1,0],
-      [0,0,0,1,0,0,0],
-      [0,1,0,0,0,1,0]
+    /*
+      Labyrinth-Logik
+      0 = Weg, 1 = Wand
+      Wir fügen beim Rendern einen äußeren Wald-Ring (2) hinzu.
+      Start: im Wald oben am Eingang, Ziel: exakt im Zentrum (gelbes Haus).
+    */
+    const baseMaze = [
+      /* 15 x 15 – komplizierter, aber mit sicherem Pfad ins Zentrum */
+      [0,1,0,0,1,0,0,0,1,0,1,0,0,1,0],
+      [0,1,0,1,0,1,1,0,0,0,0,1,0,1,0],
+      [0,0,0,1,0,0,0,1,1,1,0,1,0,0,0],
+      [1,1,0,1,1,1,0,0,0,1,0,1,1,1,0],
+      [0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],
+      [0,1,1,1,0,1,0,1,1,1,1,1,0,1,0],
+      [0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      [1,1,0,1,1,1,1,1,0,1,0,1,1,1,0],
+      [0,0,0,0,0,0,0,1,0,1,0,0,0,1,0],
+      [0,1,1,1,1,1,0,1,0,1,1,1,0,1,0],
+      [0,1,0,0,0,0,0,1,0,0,0,1,0,0,0],
+      [0,1,0,1,1,1,0,1,1,1,0,1,1,1,0],
+      [0,0,0,1,0,0,0,0,0,1,0,0,0,1,0],
+      [1,1,0,1,0,1,1,1,0,1,0,1,0,1,0],
+      [0,0,0,0,0,0,0,1,0,0,0,1,0,0,0],
     ];
-    let position = { r: 0, c: 0 };
-    const goal = { r: 6, c: 6 };
-    const container = document.getElementById('maze-container');
-    function drawMaze() {
-      container.innerHTML = '';
-      const table = document.createElement('table');
-      for (let r = 0; r < maze.length; r++) {
-        const tr = document.createElement('tr');
-        for (let c = 0; c < maze[r].length; c++) {
-          const td = document.createElement('td');
-          if (maze[r][c] === 1) {
-            td.classList.add('wall');
-          }
+    const SIZE = baseMaze.length; // 15
+    const GRID = SIZE + 2;        // + äußerer Wald-Ring
+    const FOREST = 2;
+
+    // Ziel in der Mitte:
+    const goal = { r: Math.floor(GRID/2), c: Math.floor(GRID/2) }; // (8,8)
+
+    // Eingang oben in der Mitte (im Wald-Ring)
+    const entranceCol = goal.c; // gleiche Spalte wie Ziel
+    let position = { r: 0, c: entranceCol }; // Start im Wald (oben)
+
+    // Maze inklusive Wald-Ring aufbauen
+    const grid = Array.from({length: GRID}, (_, r) =>
+      Array.from({length: GRID}, (_, c) => {
+        if (r === 0 || c === 0 || r === GRID-1 || c === GRID-1) return FOREST;
+        return baseMaze[r-1][c-1] === 1 ? 1 : 0;
+      })
+    );
+
+    // Öffnung unterhalb des Starts ins Labyrinth
+    grid[1][entranceCol] = 0;
+
+    // Rendering
+    const mazeEl = document.getElementById('maze');
+    document.documentElement.style.setProperty('--cols', GRID);
+
+    function draw(){
+      mazeEl.innerHTML = '';
+      for (let r = 0; r < GRID; r++){
+        for (let c = 0; c < GRID; c++){
+          const div = document.createElement('div');
+          div.className = 'cell ' + cellClass(grid[r][c], r, c);
+          div.setAttribute('role', 'gridcell');
+          div.setAttribute('aria-label', ariaLabelFor(r,c));
           if (r === position.r && c === position.c) {
-            td.classList.add('player');
+            div.classList.add('player');
+            // Für Tastaturfokus
+            div.tabIndex = 0;
           }
-          if (r === goal.r && c === goal.c) {
-            td.classList.add('goal');
-          }
-          tr.appendChild(td);
+          mazeEl.appendChild(div);
         }
-        table.appendChild(tr);
       }
-      container.appendChild(table);
+      focusPlayer();
     }
-    function move(dr, dc) {
+
+    function cellClass(v, r, c){
+      if (r === goal.r && c === goal.c) return 'goal';
+      if (v === 1) return 'wall';
+      if (v === FOREST) return 'forest';
+      return 'path';
+    }
+    function ariaLabelFor(r,c){
+      if (r === position.r && c === position.c) return 'Nikolaus';
+      if (r === goal.r && c === goal.c) return 'Gelbes Haus';
+      const v = grid[r][c];
+      if (v === 1) return 'Wand';
+      if (v === FOREST) return 'Wald';
+      return 'Weg';
+    }
+    function focusPlayer(){
+      const player = mazeEl.querySelector('.player');
+      if (player) player.focus({preventScroll:true});
+    }
+
+    function canMove(r, c){
+      if (r < 0 || c < 0 || r >= GRID || c >= GRID) return false;
+      if (grid[r][c] === 1) return false; // Wände blockieren
+      return true; // Weg oder Wald erlaubt
+    }
+
+    function move(dr, dc){
       const nr = position.r + dr;
       const nc = position.c + dc;
-      if (nr < 0 || nc < 0 || nr >= maze.length || nc >= maze[0].length) return;
-      if (maze[nr][nc] === 1) return;
+      if (!canMove(nr, nc)) return;
       position = { r: nr, c: nc };
-      drawMaze();
-      if (position.r === goal.r && position.c === goal.c) {
-        showLetter('N');
-        document.removeEventListener('keydown', keyHandler);
+      draw();
+      checkWin();
+    }
+
+    function checkWin(){
+      if (position.r === goal.r && position.c === goal.c){
+        document.getElementById('win').style.display = 'block';
+        // Buchstabe für den Kalender-Tag (optional anpassbar)
+        document.getElementById('letter').textContent = 'N';
+        detachControlsOnWin();
       }
     }
-    function keyHandler(e) {
-      switch (e.key) {
-        case 'ArrowUp': move(-1, 0); break;
-        case 'ArrowDown': move(1, 0); break;
-        case 'ArrowLeft': move(0, -1); break;
-        case 'ArrowRight': move(0, 1); break;
-      }
+
+    function detachControlsOnWin(){
+      document.removeEventListener('keydown', keyHandler);
+      mazeEl.removeEventListener('touchstart', onTouchStart, {passive:false});
+      mazeEl.removeEventListener('touchend', onTouchEnd, {passive:false});
+      buttons.up.onclick = buttons.down.onclick = buttons.left.onclick = buttons.right.onclick = null;
     }
-    drawMaze();
+
+    // Tastatursteuerung
+    function keyHandler(e){
+      const key = e.key.toLowerCase();
+      if (['arrowup','w'].includes(key))      move(-1, 0);
+      else if (['arrowdown','s'].includes(key)) move( 1, 0);
+      else if (['arrowleft','a'].includes(key)) move( 0,-1);
+      else if (['arrowright','d'].includes(key))move( 0, 1);
+    }
     document.addEventListener('keydown', keyHandler);
-    function showLetter(letter) {
-      const container = document.getElementById('letter-container');
-      document.getElementById('letter').textContent = letter;
-      container.style.display = 'block';
+
+    // Touch / Wischsteuerung
+    let startX=0, startY=0, startTime=0;
+    const SWIPE_MIN = 24;   // minimale Distanz in Pixel
+    const SWIPE_MAXT = 600; // maximale Dauer in ms
+
+    function onTouchStart(e){
+      if (!e.touches || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY; startTime = Date.now();
     }
-  </script>
-</body>
+    function onTouchEnd(e){
+      const dt = Date.now() - startTime;
+      if (dt > SWIPE_MAXT) return;
+      const t = (e.changedTouches && e.changedTouches[0]) || null;
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN) return;
+      if (Math.abs(dx) > Math.abs(dy)){
+        move(0, dx > 0 ? 1 : -1);
+      } else {
+        move(dy > 0 ? 1 : -1, 0);
+      }
+    }
+
+    mazeEl.addEventListener('touchstart', onTouchStart, {passive:false});
+    mazeEl.addEventListener('touchend', onTouchEnd, {passive:false});
+
+    // On-Screen-Buttons
+    const buttons = {
+      up:    document.querySelector('.btn.up'),
+      down:  document.qu
