@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>6. Dezember – Nikolaus auf dem Weg zu dir</title>
+<title>6. Dezember – Nikolaus im harten Labyrinth</title>
 <style>
   :root{
     --cell: 22px;
@@ -54,8 +54,7 @@
     grid-template-columns:repeat(var(--cols), var(--cell));
     grid-auto-rows:var(--cell);
     gap:var(--gap);
-    /* Vertikales Seiten-Scrollen erlauben */
-    touch-action: pan-y;
+    touch-action: pan-y; /* vertikal scrollen erlauben */
     outline:2px solid var(--grid-outline);
     outline-offset:4px;
     background:#fafafaAA; border-radius:10px;
@@ -70,14 +69,14 @@
   }
 
   .wall{   background:var(--wall); }
-  .path{   background:var(--path); }            /* besucht */
-  .path.dim{ background:var(--path-dim); }      /* im Sichtkegel, aber unbesucht */
+  .path{   background:var(--path); }
+  .path.dim{ background:var(--path-dim); }
   .forest{ background:var(--forest); }
 
   .goal{ background:var(--house); }
   .goal.fallback::after{ content:"🏠"; font-size:calc(var(--cell)*0.75); }
+  .goal.dim{ filter: brightness(0.85); }
 
-  /* Spieler- & Ziel-Sprites */
   .sprite{
     position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%);
     width:calc(var(--cell) * var(--player-scale)); height:calc(var(--cell) * var(--player-scale));
@@ -129,7 +128,7 @@
 
 <header>
   <h1>6. Dezember – Nikolaus im harten Labyrinth</h1>
-  
+  <div class="sub">Langer Umweg ums Haus, viele Sackgassen. Außenwald bleibt sichtbar.</div>
   <p class="intro">„Von draußen vom Walde, da komme ich her, aber ich habe leider den Weg zur Eichbühlstraße vergessen. Kannst du mir zeigen, wie ich zu deinem Haus komme?“</p>
 </header>
 
@@ -142,13 +141,11 @@
     <div id="maze" class="maze" aria-label="Labyrinth" role="grid" tabindex="0"></div>
   </div>
 
-  <!-- Hinweis + Taschenlampe unter dem Spielfeld -->
   <p class="hint">Falls es zu schwer ist, dann ist hier eine Taschenlampe:</p>
   <div class="bar">
     <button id="fogToggle" class="toggle" aria-pressed="false">Sichtfeld AN</button>
   </div>
 
-  <!-- D-Pad -->
   <div class="controls" aria-label="Pfeiltasten">
     <button class="btn up"    aria-label="Nach oben">▲</button>
     <button class="btn left"  aria-label="Nach links">◀</button>
@@ -175,39 +172,40 @@ if (backgroundImageURL){
 /* ==== Schalter: eigenes 29x29-Level benutzen? ==== */
 const USE_LEVEL = false; // <-- auf true setzen, um LEVEL (unten) zu benutzen
 
-/* ==== 29×29-Level: 0 = Weg, 1 = Wand ====
-   Jede der 29 Zeilen muss 29 Einträge enthalten.
-   Beispiel (hier nur Demo!): */
+/* ==== 29×29-Level: 0 = Weg, 1 = Wand ==== */
 const LEVEL = [
-   [1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-   [1,0,0,0,0,0,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
-   [1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
-   [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1],
-   [1,0,1,0,1,1,1,0,1,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1,1],
-   [1,0,1,0,1,0,0,0,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1],
-   [1,0,1,0,1,1,1,1,1,0,1,1,0,0,0,0,0,0,1,1,0,1,1,1,1,1,0,1,1],
-   [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1],
-   [1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1],
-   [1,0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1],
-   [1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,0,1,1],
-   [1,1,0,0,1,1,1,1,1,0,1,1,0,0,0,0,1,1,1,1,1,0,1,1,0,0,0,1,1],
-   [1,1,1,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,1],
-   [1,1,1,0,1,0,1,1,1,1,1,1,0,0,0,1,1,1,0,1,1,0,0,0,0,0,0,1,1],
-   [1,1,1,0,1,0,0,0,0,0,0,1,0,1,1,1,1,1,0,1,1,1,1,0,1,1,0,1,1],
-   [1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,0,0,0,1,1,1,1,0,1,1,0,1,1],
-   [1,1,1,0,1,0,1,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1],
-   [1,1,1,1,1,0,0,1,0,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1,1,0,1,1],
-   [1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,0,1,1],
-   [1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1],
-   [1,1,0,1,1,1,1,0,0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1],
-   [1,1,0,1,1,1,1,0,1,1,1,1,0,1,0,1,1,0,0,0,1,1,0,1,1,1,1,1,1],
-   [1,1,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,1,0,1,0,0,0,0,1,1,1,1],
-   [1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,0,0,1,1,0,1,1,1,1,0,1,1,1,1],
-   [1,1,0,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1,1],
-   [1,1,1,0,0,0,0,0,0,0,1,1,0,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,1],
-   [1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,1],
-   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-]
+ [1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+ [1,0,0,0,0,0,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
+ [1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+ [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1],
+ [1,0,1,0,1,1,1,0,1,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1,1],
+ [1,0,1,0,1,0,0,0,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1],
+ [1,0,1,0,1,1,1,1,1,0,1,1,0,0,0,0,0,0,1,1,0,1,1,1,1,1,0,1,1],
+ [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1],
+ [1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1],
+ [1,0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1],
+ [1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,0,1,1],
+ [1,1,0,0,1,1,1,1,1,0,1,1,0,0,0,0,1,1,1,1,1,0,1,1,0,0,0,1,1],
+ [1,1,1,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,1],
+ [1,1,1,0,1,0,1,1,1,1,1,1,0,0,0,1,1,1,0,1,1,0,0,0,0,0,0,1,1],
+ [1,1,1,0,1,0,0,0,0,0,0,1,0,1,1,1,1,1,0,1,1,1,1,0,1,1,0,1,1],
+ [1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,0,0,0,1,1,1,1,0,1,1,0,1,1],
+ [1,1,1,0,1,0,1,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1],
+ [1,1,1,1,1,0,0,1,0,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1,1,0,1,1],
+ [1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,0,1,1],
+ [1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1],
+ [1,1,0,1,1,1,1,0,0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1],
+ [1,1,0,1,1,1,1,0,1,1,1,1,0,1,0,1,1,0,0,0,1,1,0,1,1,1,1,1,1],
+ [1,1,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,1,0,1,0,0,0,0,1,1,1,1],
+ [1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,0,0,1,1,0,1,1,1,1,0,1,1,1,1],
+ [1,1,0,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1,1],
+ [1,1,1,0,0,0,0,0,0,0,1,1,0,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,1],
+ [1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,1],
+ [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+ /* 29. Zeile hinzugefügt (unten, gemischte Innenstruktur, 29 Einträge) */
+ [1,1,1,0,0,0,0,0,0,0,1,1,0,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,1]
+];
+
 /* ==== Parameter ==== */
 const FOREST=2, WALL=1, PATH=0;
 const SIZE = 29;   // fix
@@ -253,8 +251,7 @@ function generateAndDraw(){
   if (USE_LEVEL && isValidLevel(LEVEL)) {
     carve = copyLevel(LEVEL); // 0/1 -> direkt übernehmen
   } else {
-    // Fallback: Generator wie zuvor (falls LEVEL fehlt/ungültig)
-    carve = buildMazeComplex(SIZE);
+    carve = buildMazeComplex(SIZE); // Fallback-Generator
   }
 
   const mid = { r: Math.floor(SIZE/2), c: Math.floor(SIZE/2) };
@@ -288,21 +285,17 @@ function isValidLevel(arr){
   return true;
 }
 function copyLevel(arr){
-  // tiefe Kopie der 0/1-Matrix
   return arr.map(row => row.slice());
 }
 function pickEntranceFromTopRow(carve, centerC){
-  // Finde alle Spalten c in Zeile 1 mit PATH (0)
   const candidates = [];
   for (let c=0;c<SIZE;c++){
     if (carve[1][c]===PATH) candidates.push(c);
   }
   if (!candidates.length){
-    // Notfall: Mittlere Spalte öffnen
     const c = Math.floor(SIZE/2);
     carve[1][c]=PATH; return c;
   }
-  // wähle die Spalte mit maximaler |c - centerC|
   let best=candidates[0], bestD=-1;
   for (const c of candidates){
     const d=Math.abs(c-centerC);
@@ -311,7 +304,7 @@ function pickEntranceFromTopRow(carve, centerC){
   return best;
 }
 
-/* ==== Generator (Fallback) – identisch wie vorher, nur für Notfälle ==== */
+/* ==== Generator (Fallback) ==== */
 function buildMazeComplex(n){
   if (n % 2 === 0) n -= 1;
   const rows=n, cols=n;
@@ -345,7 +338,7 @@ function buildMazeComplex(n){
     } else { stack.pop(); last=-1; }
   }
 
-  // ein paar zusätzliche Gänge
+  // zusätzliche Gänge
   const spurChance = 0.42;
   for (let rr=1; rr<rows-1; rr++){
     for (let cc=1; cc<cols-1; cc++){
@@ -372,12 +365,11 @@ function buildMazeComplex(n){
 
 /* ==== Big grid mit Wald-Ring + Eingang + Start/Ziel ==== */
 function buildBigGrid(carve, entranceColBig, mid){
-  // carve ist 29x29 mit 0 (Weg) / 1 (Wand)
   const n=carve.length;
   const big = Array.from({length:n+2},(_,R)=>
     Array.from({length:n+2},(_,C)=>{
       if (R===0||C===0||R===n+1||C===n+1) return FOREST;
-      return carve[R-1][C-1]; // 0 oder 1 direkt übernehmen
+      return carve[R-1][C-1];
     })
   );
 
@@ -530,14 +522,14 @@ function keyHandler(e){
   else if(['arrowright','d'].includes(k)) move(0,1);
 }
 
-/* Touch – vertikales Scrollen zulassen; horizontale Wischgeste bewegt die Figur */
+/* Touch – horizontale Wischgeste bewegt die Figur, vertikales Scrollen bleibt */
 let sx=0, sy=0, st=0;
 const SWIPE_MIN=22, SWIPE_MAXT=600;
 function onTouchStart(e){
   if (!e.touches || e.touches.length!==1) return;
   sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now();
 }
-function onTouchMove(e){ /* kein preventDefault -> pan-y erlaubt */ }
+function onTouchMove(e){ /* pan-y erlaubt */ }
 function onTouchEnd(e){
   const dt=Date.now()-st; if(dt>SWIPE_MAXT) return;
   const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
