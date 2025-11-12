@@ -39,7 +39,7 @@
   .frame{
     padding:8px; border-radius:16px; background:rgba(255,255,255,.65);
     box-shadow:0 10px 28px rgba(0,0,0,.18), inset 0 0 0 2px var(--grid-outline);
-    max-width:100vw; max-height:calc(100vh - 220px); overflow:auto;
+    max-width:100vw; max-height:calc(100vh - 260px); overflow:auto; /* Backup */
   }
 
   .maze{
@@ -47,10 +47,11 @@
     grid-template-columns:repeat(var(--cols), var(--cell));
     grid-auto-rows:var(--cell);
     gap:var(--gap);
-    touch-action: pan-x pan-y;
+    /* Wichtig: Page-Scroll unterbinden, damit Wischen nur die Figur bewegt */
+    touch-action: none;
     outline:2px solid var(--grid-outline); outline-offset:6px;
     background:#fafafaAA; border-radius:12px;
-    isolation:isolate; /* sorgt dafür, dass Overlays klar sichtbar bleiben */
+    isolation:isolate;
   }
 
   .cell{
@@ -84,9 +85,7 @@
   .goal-sprite.emoji{ font-size:calc(var(--cell) * var(--goal-scale)*0.9); }
 
   /* Fog of War */
-  .fog{
-    position:relative;
-  }
+  .fog{ position:relative; }
   .fog::after{
     content:""; position:absolute; inset:0;
     background: rgba(0,0,0,0.55);
@@ -96,8 +95,24 @@
 
   .win{display:none; padding:10px 14px; background:#fff3cd; border:1px solid #ffe08a; border-radius:10px;}
 
+  /* D-Pad */
+  .controls{
+    display:grid;
+    grid-template-areas:
+      ". up ."
+      "left center right"
+      ". down .";
+    gap:8px; touch-action:none;
+  }
+  .btn{
+    grid-area:center; width:56px;height:56px;border-radius:12px;border:1px solid #b8c1cc;background:#fff;font-size:22px;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .up{grid-area:up}.down{grid-area:down}.left{grid-area:left}.right{grid-area:right}
+
   @media (max-width:380px){
-    .frame{ max-height: calc(100vh - 200px); }
+    .frame{ max-height: calc(100vh - 240px); }
+    .btn{ width:48px; height:48px; font-size:20px; }
   }
 </style>
 </head>
@@ -106,7 +121,7 @@
 
 <header>
   <h1>6. Dezember – Nikolaus im harten Labyrinth</h1>
-  <div class="sub">Gleich groß, aber mit maximalen Sackgassen & langem Weg zur Mitte.</div>
+  <div class="sub">Minimale Wege, Fog of War und extralanger Lösungsweg zur Mitte.</div>
 </header>
 
 <main class="wrap">
@@ -117,6 +132,14 @@
 
   <div class="frame" id="frame">
     <div id="maze" class="maze" aria-label="Labyrinth" role="grid" tabindex="0"></div>
+  </div>
+
+  <div class="controls" aria-label="Pfeiltasten">
+    <button class="btn up"    aria-label="Nach oben">▲</button>
+    <button class="btn left"  aria-label="Nach links">◀</button>
+    <button class="btn"       aria-label="Zentrum" disabled>🎅</button>
+    <button class="btn right" aria-label="Nach rechts">▶</button>
+    <button class="btn down"  aria-label="Nach unten">▼</button>
   </div>
 
   <div class="win" id="win">Geschafft! Merke dir den Buchstaben: <strong id="letter">N</strong></div>
@@ -138,7 +161,7 @@ let GRID = 0;
 let grid, position, goal;
 
 let fogEnabled = true; // Sichtfeld standardmäßig an
-const FOG_RADIUS = 2;  // sichtbare Nachbarschaft (Chebyshev-Distanz)
+const FOG_RADIUS = 2;  // sichtbare Nachbarschaft
 
 /* Sichtbarkeits-Speicher */
 let visited;
@@ -147,6 +170,12 @@ const mazeEl   = document.getElementById('maze');
 const frameEl  = document.getElementById('frame');
 const regenBtn = document.getElementById('regen');
 const fogBtn   = document.getElementById('fogToggle');
+
+/* D-Pad Buttons */
+const upBtn    = document.querySelector('.up');
+const downBtn  = document.querySelector('.down');
+const leftBtn  = document.querySelector('.left');
+const rightBtn = document.querySelector('.right');
 
 regenBtn.addEventListener('click', generateAndDraw);
 fogBtn.addEventListener('click', () => {
@@ -164,37 +193,33 @@ function generateAndDraw(){
   GRID = SIZE + 2; // + äußerer Wald-Ring
   document.documentElement.style.setProperty('--cols', String(GRID));
 
-  const carve = buildMazeComplex(SIZE);           // 1) perfektes Maze + Spurs
+  const carve = buildMazeComplex(SIZE); // 1) perfektes Maze mit Kurven & Spurs
   const mid = { r: Math.floor(SIZE/2), c: Math.floor(SIZE/2) };
 
   // 2) Eingang so wählen, dass Distanz zum Zentrum maximal wird
   const dist = bfsDistances(carve, mid.r, mid.c);
-  const bestEntranceColInner = argmaxTopEntrance(carve, dist); // 0..SIZE-1 (inner)
-  const entranceColBig = bestEntranceColInner + 1;             // + Wald-Rand
+  const bestEntranceColInner = argmaxTopEntrance(carve, dist); // 0..SIZE-1
+  const entranceInner = { r: 1, c: bestEntranceColInner };
 
-  // 3) Großes Grid bauen (mit Wald & bestem Eingang)
-  ({grid, position, goal} = buildBigGrid(carve, entranceColBig));
+  // 3) Lösungsweg ermitteln (BFS-Kürzester) & alles andere hart wegprunen
+  const solutionPath = shortestPath(carve, entranceInner, mid);
+  const pruned = pruneToSolutionWithDecoys(carve, solutionPath, {decoyChance:0.06, decoyMaxLen:2});
 
-  // 4) Sichtbarkeit initialisieren & Startfeld als besucht markieren
+  // 4) Großes Grid bauen (mit Wald & bestem Eingang)
+  const entranceColBig = bestEntranceColInner + 1; // + Wald-Rand
+  ({grid, position, goal} = buildBigGrid(pruned, entranceColBig));
+
+  // 5) Sichtbarkeit initialisieren & Startfeld als besucht markieren
   visited = new Set();
   visited.add(`${position.r},${position.c}`);
 
-  // 5) Größenberechnung & Render
-  fitCellSize(true);   // nur Größe
-  // Falls der sichtbare Bereich am Start < 1% aller Zellen ist, Fog für den ersten Frame deaktivieren:
-  const tmpSeen = computeVisibility();
-  if (percentVisible(tmpSeen) < 0.01) {
-    const prev = fogEnabled; fogEnabled = false; draw(); fogEnabled = prev;
-  }
+  // 6) Größenberechnung & Render
+  fitCellSize(true);
   draw();
   attachControls();
 }
 
-/* === Komplexer Generator ===
-   - starker Kurven-Bias (weniger lange Geraden)
-   - aggressive Spurs (bis 3 Zellen) für viele Sackgassen
-   - KEINE Loops (perfect maze)
-*/
+/* === Generator: wie gehabt (ohne Loops), damit's schwer bleibt === */
 function buildMazeComplex(n){
   if (n % 2 === 0) n -= 1;
   const rows=n, cols=n;
@@ -216,10 +241,9 @@ function buildMazeComplex(n){
       if (inBounds(nr,nc) && carve[nr][nc]===WALL) cand.push({i,nr,nc,mr:dr/2,mc:dc/2});
     }
     if (cand.length){
-      // Starker Turn-Bias (vermeide gleiche Richtung)
       cand.sort((a,b)=>{
         const aTurn=(a.i===last)?1:0, bTurn=(b.i===last)?1:0;
-        if (aTurn!==bTurn) return aTurn - bTurn;
+        if (aTurn!==bTurn) return aTurn - bTurn; // Kurven bevorzugen
         return Math.random()-0.5;
       });
       const p=cand[0];
@@ -229,22 +253,22 @@ function buildMazeComplex(n){
     } else { stack.pop(); last=-1; }
   }
 
-  // Spurs: viele Sackgassen; Längen 1–3
+  // Spurs (Sackgassen) – bleiben, werden später evtl. weggeprunt
   const spurChance = 0.35;
   for (let rr=1; rr<rows-1; rr++){
     for (let cc=1; cc<cols-1; cc++){
       if (carve[rr][cc]!==PATH || Math.random()>=spurChance) continue;
-      const dirs = DIRS.slice().sort(()=>Math.random()-0.5);
+      const dirs = [[-2,0],[2,0],[0,-2],[0,2]].sort(()=>Math.random()-0.5);
       for (const [dr,dc] of dirs){
-        let a1=rr+dr/2, b1=cc+dc/2;
-        let a2=rr+dr,   b2=cc+dc;
-        if (!inBounds(a2,b2)) continue;
+        const a1=rr+dr/2, b1=cc+dc/2;
+        const a2=rr+dr,   b2=cc+dc;
+        if (!(a1>0&&b1>0&&a1<rows-1&&b1<cols-1)) continue;
+        if (!(a2>0&&b2>0&&a2<rows-1&&b2<cols-1)) continue;
         if (carve[a1][b1]===WALL && carve[a2][b2]===WALL){
           carve[a1][b1]=PATH;
-          if (Math.random()<0.8 && inBounds(a2,b2)){ carve[a2][b2]=PATH;
-            // 30% Chance auf Tiefe 3
+          if (Math.random()<0.8){ carve[a2][b2]=PATH;
             const a3=a2+dr/2, b3=b2+dc/2;
-            if (Math.random()<0.3 && inBounds(a3,b3) && carve[a3][b3]===WALL){ carve[a3][b3]=PATH; }
+            if (Math.random()<0.3 && a3>0&&b3>0&&a3<rows-1&&b3<cols-1 && carve[a3][b3]===WALL){ carve[a3][b3]=PATH; }
           }
           break;
         }
@@ -254,7 +278,7 @@ function buildMazeComplex(n){
   return carve;
 }
 
-/* Distanzkarte (BFS) ab Mittelpunkt */
+/* ==== BFS-Distanzen, kürzester Pfad, Pruning ==== */
 function bfsDistances(carve, sr, sc){
   const R=carve.length, C=carve[0].length;
   const dist=Array.from({length:R},()=>Array(C).fill(Infinity));
@@ -266,12 +290,67 @@ function bfsDistances(carve, sr, sc){
       const nr=r+dr, nc=c+dc;
       if(nr<0||nc<0||nr>=R||nc>=C) continue;
       if (carve[nr][nc]!==PATH) continue;
-      if (dist[nr][nc] > dist[r][c]+1){
-        dist[nr][nc]=dist[r][c]+1; q.push([nr,nc]);
-      }
+      if (dist[nr][nc] > dist[r][c]+1){ dist[nr][nc]=dist[r][c]+1; q.push([nr,nc]); }
     }
   }
   return dist;
+}
+
+function shortestPath(carve, start, goal){
+  const R=carve.length, C=carve[0].length;
+  const dist=bfsDistances(carve, start.r, start.c);
+  if (!Number.isFinite(dist[goal.r][goal.c])) return new Set();
+  const steps=[[1,0],[-1,0],[0,1],[0,-1]];
+  const path=new Set();
+  let r=goal.r, c=goal.c;
+  path.add(`${r},${c}`);
+  while (r!==start.r || c!==start.c){
+    for (const [dr,dc] of steps){
+      const nr=r+dr, nc=c+dc;
+      if(nr<0||nc<0||nr>=R||nc>=C) continue;
+      if (dist[nr][nc] === dist[r][c]-1){
+        r=nr; c=nc; path.add(`${r},${c}`); break;
+      }
+    }
+  }
+  return path;
+}
+
+/* Prune auf: nur Lösungspfad + wenige Mini-Decoys */
+function pruneToSolutionWithDecoys(carve, pathSet, {decoyChance=0.06, decoyMaxLen=2}={}){
+  const R=carve.length, C=carve[0].length;
+  const isPath = (r,c)=> pathSet.has(`${r},${c}`);
+  // 1) alles außer Lösungspfad = Wand
+  for (let r=0;r<R;r++){
+    for (let c=0;c<C;c++){
+      if (carve[r][c]===PATH && !isPath(r,c)) carve[r][c]=WALL;
+    }
+  }
+  // 2) kleine Decoy-Stummel von Pfad abzweigen
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  for (let r=1;r<R-1;r++){
+    for (let c=1;c<C-1;c++){
+      if (!isPath(r,c) || Math.random()>=decoyChance) continue;
+      const shuffled = dirs.slice().sort(()=>Math.random()-0.5);
+      for (const [dr,dc] of shuffled){
+        const a1=r+dr, b1=c+dc;
+        if (a1<=0||b1<=0||a1>=R-1||b1>=C-1) continue;
+        if (carve[a1][b1]===WALL){
+          carve[a1][b1]=PATH;
+          // Tiefe 2..decoyMaxLen
+          let len = 1 + Math.floor(Math.random()*decoyMaxLen);
+          let pr=a1, pc=b1;
+          while (len>1){
+            const nr=pr+dr, nc=pc+dc;
+            if (nr<=0||nc<=0||nr>=R-1||nc>=C-1 || carve[nr][nc]!==WALL) break;
+            carve[nr][nc]=PATH; pr=nr; pc=nc; len--;
+          }
+          break;
+        }
+      }
+    }
+  }
+  return carve;
 }
 
 /* Beste obere Öffnung (größte Distanz zur Mitte) */
@@ -303,17 +382,18 @@ function buildBigGrid(carve, entranceColBig){
   return { grid: big, position:start, goal:g };
 }
 
-/* ==== Sizing: alles sichtbar ==== */
+/* ==== Sizing ==== */
 function fitCellSize(onlySize){
   const headerH = document.querySelector('header')?.offsetHeight || 0;
   const barH    = document.querySelector('.bar')?.offsetHeight    || 0;
+  const controlsH = document.querySelector('.controls')?.offsetHeight || 0;
   const winH    = document.getElementById('win')?.offsetHeight    || 0;
 
   const vw = Math.max(document.documentElement.clientWidth,  window.innerWidth  || 0);
   const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
   const availW = Math.max(200, vw - 24);
-  const availH = Math.max(200, vh - (headerH + barH + winH + 24));
+  const availH = Math.max(200, vh - (headerH + barH + controlsH + winH + 24));
 
   const cols = GRID || parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols')) || 1;
   const cellByW = Math.floor(availW / cols) - 1;
@@ -374,17 +454,15 @@ function draw(){
   focusPlayer();
 }
 
-/* Sichtfeld: Radius um Spieler + alles Betretene (persistente Sicht) */
+/* Sichtfeld */
 function computeVisibility(){
   const seen = Array.from({length:GRID},()=>Array(GRID).fill(false));
-  // Persistenz: alles, was je besucht wurde, bleibt sichtbar
   if (visited){
     for (const key of visited){
       const [r,c] = key.split(',').map(Number);
       if (r>=0 && c>=0 && r<GRID && c<GRID) seen[r][c]=true;
     }
   }
-  // aktueller Radius
   const R = position.r, C = position.c;
   for (let r=R-FOG_RADIUS; r<=R+FOG_RADIUS; r++){
     for (let c=C-FOG_RADIUS; c<=C+FOG_RADIUS; c++){
@@ -396,12 +474,6 @@ function computeVisibility(){
     }
   }
   return seen;
-}
-
-function percentVisible(seen){
-  let vis=0, total=GRID*GRID;
-  for (let r=0;r<GRID;r++) for (let c=0;c<GRID;c++) if (seen[r][c]) vis++;
-  return vis/total;
 }
 
 function focusPlayer(){
@@ -433,13 +505,17 @@ function keyHandler(e){
   else if(['arrowright','d'].includes(k)) move(0,1);
 }
 
+/* Touch – mit preventDefault, damit die Seite nicht mitscrollt */
 let sx=0, sy=0, st=0;
 const SWIPE_MIN=22, SWIPE_MAXT=600;
 function onTouchStart(e){
   if (!e.touches || e.touches.length!==1) return;
+  e.preventDefault();
   sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now();
 }
+function onTouchMove(e){ if (e.touches && e.touches.length===1) e.preventDefault(); }
 function onTouchEnd(e){
+  e.preventDefault();
   const dt=Date.now()-st; if(dt>SWIPE_MAXT) return;
   const t=e.changedTouches && e.changedTouches[0]; if(!t) return;
   const dx=t.clientX-sx, dy=t.clientY-sy;
@@ -452,13 +528,25 @@ function attachControls(){
   detachControls();
   document.addEventListener('keydown', keyHandler);
   mazeEl.addEventListener('touchstart', onTouchStart, {passive:false});
-  mazeEl.addEventListener('touchend', onTouchEnd, {passive:false});
+  mazeEl.addEventListener('touchmove',  onTouchMove,  {passive:false});
+  mazeEl.addEventListener('touchend',   onTouchEnd,   {passive:false});
+  upBtn.onclick    = ()=>move(-1,0);
+  downBtn.onclick  = ()=>move( 1,0);
+  leftBtn.onclick  = ()=>move( 0,-1);
+  rightBtn.onclick = ()=>move( 0, 1);
 }
 function detachControls(){
   document.removeEventListener('keydown', keyHandler);
-  mazeEl.removeEventListener('touchstart', onTouchStart, {passive:false});
-  mazeEl.removeEventListener('touchend', onTouchEnd, {passive:false});
+  mazeEl.removeEventListener('touchstart', onTouchStart);
+  mazeEl.removeEventListener('touchmove',  onTouchMove);
+  mazeEl.removeEventListener('touchend',   onTouchEnd);
 }
+
+/* Utils (optional nützlich)
+function debugCountPaths(big){
+  let c=0; for(let r=0;r<big.length;r++)for(let x=0;x<big[0].length;x++) if(big[r][x]!==1)c++; return c;
+}
+*/
 </script>
 </body>
 </html>
