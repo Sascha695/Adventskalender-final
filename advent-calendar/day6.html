@@ -3,18 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Tag 6 – Wortsuppe (nur vorwärts & von oben nach unten)</title>
+  <title>Wortsuppe – Bilder statt Wörter</title>
   <style>
-    :root{
-      --accent:#c54c3d;
-      --found:#1d9e57;
-    }
+    :root{ --accent:#c54c3d; --found:#1d9e57; }
     html,body{height:100%}
     body{
-      margin:0;
+      margin:0; background:#f7efe6; color:#222;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:#f7efe6;
-      color:#222;
     }
     header{ text-align:center; background:#c54c3d; color:#fff; padding:1rem .75rem; }
     header h1{ margin:0; font-size:2rem; }
@@ -24,18 +19,44 @@
     @media (max-width:900px){ .wrap{ grid-template-columns:1fr; } }
 
     .card{
-      background:rgba(255,255,255,.8);
+      background:rgba(255,255,255,.85);
       border:1px solid rgba(0,0,0,.08);
-      border-radius:16px;
-      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-radius:16px; box-shadow:0 8px 20px rgba(0,0,0,.12);
       padding:1rem;
     }
 
-    .words h2{ margin:.2rem 0 .6rem; }
-    .words ul{ list-style:none; padding:0; margin:0; columns:2; column-gap:1rem; }
-    @media (max-width:480px){ .words ul{ columns:1; } }
-    .words li{ padding:.25rem .4rem; border-radius:8px; break-inside:avoid-column; }
-    .words li.found{ color:var(--found); text-decoration:line-through; font-weight:700; }
+    /* Bilder-Tafel */
+    .pics h2{ margin:.2rem 0 .6rem; }
+    .hint{ font-size:.95rem; color:#555; margin:.25rem 0 .75rem; }
+    .picgrid{
+      display:grid; gap:.6rem;
+      grid-template-columns: repeat(auto-fill, minmax(90px,1fr));
+    }
+    .pic{
+      position:relative; aspect-ratio: 1/1;
+      border:1px solid rgba(0,0,0,.12); border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      background:#fff;
+      overflow:hidden;
+    }
+    .pic img{
+      max-width:80%; max-height:80%; object-fit:contain;
+      display:block;
+      transition: filter .2s ease, transform .2s ease;
+    }
+    .pic .cap{
+      position:absolute; bottom:4px; left:6px; right:6px;
+      font-size:.75rem; text-align:center; color:#444;
+      opacity:.7;
+    }
+    .pic.found img{ filter: grayscale(1) brightness(0.9); transform: scale(0.96); }
+    .pic.found::after{
+      content:"✓"; position:absolute; top:6px; right:8px;
+      background:var(--found); color:#fff; font-weight:900;
+      width:24px; height:24px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,.2);
+    }
 
     /* GRID */
     .grid{
@@ -53,30 +74,30 @@
     .cell.locked{ background:#e8fbf0; }
 
     .bar{ text-align:center; margin-top:.8rem; }
-    .btn{ appearance:none; border:none; cursor:pointer; background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.2); }
+    .btn{
+      appearance:none;border:none;cursor:pointer;background:var(--accent);color:#fff;
+      padding:.6rem 1rem;border-radius:10px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.2);
+    }
     .msg{ display:block; margin-top:.5rem; color:#333; font-weight:600; }
-    .hint{ font-size:.95rem; color:#555; margin:.25rem 0 .75rem; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Wortsuppe – Weihnachten</h1>
-  </header>
+  <header><h1>Wortsuppe – Weihnachten (Bildersuche)</h1></header>
 
   <main>
     <div class="wrap">
-      <!-- Wortliste -->
-      <section class="card words">
-        <h2>Finde diese Wörter</h2>
-        <div class="hint">Nur <strong>von links nach rechts</strong> und <strong>von oben nach unten</strong>.</div>
-        <ul id="wordList"></ul>
+      <!-- BILDER statt Wortliste -->
+      <section class="card pics">
+        <h2>Finde diese Bilder im Gitter</h2>
+        <div class="hint">Nur <b>von links nach rechts</b> und <b>von oben nach unten</b> wischen.</div>
+        <div id="picGrid" class="picgrid"></div>
         <div class="bar">
           <button class="btn" id="resetBtn">Neu mischen</button>
           <span class="msg" id="statusMsg"></span>
         </div>
       </section>
 
-      <!-- Gitter -->
+      <!-- Buchstabengitter -->
       <section class="card">
         <div id="grid" class="grid" aria-label="Wortsuppe"></div>
       </section>
@@ -84,34 +105,42 @@
   </main>
 
   <script>
-    /************ Einstellungen ************/
-    const SIZE = 15;                 // Gittergröße (15x15)
-    const WORDS = [                  // Wortliste (Großbuchstaben, ohne Leerzeichen)
-      "GESCHENK","DREIKOENIGE","NORDPOL","RAUCHFANG","KRIPPE","ADVENTSKRANZ",
-      "LEBKUCHEN","GLOCKEN","SCHLITTEN","ORNAMENT","SCHNEEMANN","WUNSCHLISTE",
-      "SCHLEIFE","TRUTHAN","KEKSE","SCHNEE","ELF","STERN","STECHPALME","RENTIER",
-      "KERZE","TANNENBAUM","NIKOLAUS","KRANZ","PLAETZCHEN","MISTEL","KAMIN",
-      "KUGELN","WEIHNACHT","ENGEL"
+    /************ Bilder & Wörter (Dateipfade anpassen) ************/
+    // word = Suchwort im Gitter (GROSS, ohne Leerzeichen), src = Bilddatei
+    const IMAGES = [
+      { word:"GESCHENK",     src:"assets/geschenk.png",     label:"Geschenk" },
+      { word:"DREIKOENIGE",  src:"assets/dreikoenige.png",  label:"Drei Könige" },
+      { word:"NIKOLAUS",     src:"assets/nikolaus.png",     label:"Nikolaus" },
+      { word:"RENTIER",      src:"assets/rentier.png",      label:"Rentier" },
+      { word:"SCHLITTEN",    src:"assets/schlitten.png",    label:"Schlitten" },
+      { word:"KERZE",        src:"assets/kerze.png",        label:"Kerze" },
+      { word:"TANNENBAUM",   src:"assets/tannenbaum.png",   label:"Tannenbaum" },
+      { word:"KRIPPE",       src:"assets/krippe.png",       label:"Krippe" },
+      { word:"STERN",        src:"assets/stern.png",        label:"Stern" },
+      { word:"KEKSE",        src:"assets/kekse.png",        label:"Kekse" },
+      { word:"GLOCKEN",      src:"assets/glocken.png",      label:"Glocken" },
+      { word:"SCHNEEMANN",   src:"assets/schneemann.png",   label:"Schneemann" }
+      // Du kannst beliebig erweitern – nur auf Gittergröße achten.
     ];
+
+    const WORDS = IMAGES.map(i => i.word); // wird fürs Platzieren & Prüfen genutzt
+
+    /************ Einstellungen ************/
+    const SIZE = 15;                       // Gittergröße (z. B. 15x15)
     const FILL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     const gridEl = document.getElementById('grid');
-    const wordListEl = document.getElementById('wordList');
+    const picGridEl = document.getElementById('picGrid');
     const statusMsg = document.getElementById('statusMsg');
     const resetBtn = document.getElementById('resetBtn');
 
     /************ Grid & Platzierung (nur → und ↓) ************/
     function emptyGrid(){ return Array.from({length:SIZE},()=>Array(SIZE).fill(null)); }
     function inBounds(x,y){ return x>=0 && x<SIZE && y>=0 && y<SIZE; }
-
-    // nur zwei Richtungen: rechts und unten
-    const DIRS = [
-      [1,0], // waagrecht links → rechts
-      [0,1], // senkrecht oben → unten
-    ];
+    const DIRS = [[1,0],[0,1]]; // rechts & unten
 
     function tryPlace(grid, word){
-      for(let t=0; t<200; t++){
+      for(let t=0; t<300; t++){
         const [dx,dy] = DIRS[Math.floor(Math.random()*DIRS.length)];
         const len = word.length;
         const maxX = dx ? SIZE - len : SIZE;
@@ -119,19 +148,17 @@
         const x0 = Math.floor(Math.random()*maxX);
         const y0 = Math.floor(Math.random()*maxY);
 
-        // passt?
         let ok = true;
         for(let i=0;i<len;i++){
-          const x = x0 + dx*i, y = y0 + dy*i;
-          const c = grid[y][x];
-          if(c && c !== word[i]){ ok=false; break; }
+          const x=x0+dx*i, y=y0+dy*i;
+          const c=grid[y][x];
+          if(c && c!==word[i]){ ok=false; break; }
         }
         if(!ok) continue;
 
-        // eintragen
         for(let i=0;i<len;i++){
-          const x = x0 + dx*i, y = y0 + dy*i;
-          grid[y][x] = word[i];
+          const x=x0+dx*i, y=y0+dy*i;
+          grid[y][x]=word[i];
         }
         return {start:[x0,y0], end:[x0+dx*(len-1), y0+dy*(len-1)]};
       }
@@ -139,75 +166,72 @@
     }
 
     function buildGrid(words){
-      const grid = emptyGrid();
-      const placed = [];
+      const grid=emptyGrid();
+      const placed=[];
       for(const w of words){
-        const word = w.replace(/\s+/g,'').toUpperCase();
-        const p = tryPlace(grid, word);
-        if(p) placed.push({word, coords:p});
+        const word=w.toUpperCase();
+        const p=tryPlace(grid,word);
+        if(p) placed.push({word,coords:p});
+        else console.warn("Konnte nicht platzieren:",word);
       }
-      // Rest auffüllen
-      for(let y=0;y<SIZE;y++){
-        for(let x=0;x<SIZE;x++){
-          if(!grid[y][x]) grid[y][x] = FILL[Math.floor(Math.random()*FILL.length)];
-        }
-      }
-      return {grid, placed};
+      for(let y=0;y<SIZE;y++)
+        for(let x=0;x<SIZE;x++)
+          if(!grid[y][x]) grid[y][x]=FILL[Math.floor(Math.random()*FILL.length)];
+      return {grid,placed};
     }
 
     /************ Rendering ************/
-    let data, foundWords, cellEls;
-    function render(){
-      gridEl.style.setProperty('--size', SIZE);
-      gridEl.innerHTML = '';
-      cellEls = [];
+    let data, foundWords;
 
+    function renderGrid(){
+      gridEl.style.setProperty('--size', SIZE);
+      gridEl.innerHTML='';
       for(let y=0;y<SIZE;y++){
         for(let x=0;x<SIZE;x++){
-          const d = document.createElement('div');
-          d.className = 'cell';
-          d.dataset.x = x; d.dataset.y = y;
-          d.textContent = data.grid[y][x];
+          const d=document.createElement('div');
+          d.className='cell';
+          d.dataset.x=x; d.dataset.y=y;
+          d.textContent=data.grid[y][x];
           gridEl.appendChild(d);
-          cellEls.push(d);
         }
       }
-      wordListEl.innerHTML = '';
-      for(const w of WORDS){
-        const li = document.createElement('li');
-        li.textContent = w;
-        li.id = 'w_'+w;
-        wordListEl.appendChild(li);
+    }
+
+    function renderPictures(){
+      picGridEl.innerHTML='';
+      for(const it of IMAGES){
+        const box=document.createElement('div');
+        box.className='pic';
+        box.id='pic_'+it.word;
+        const img=document.createElement('img');
+        img.src=it.src;
+        img.alt=it.label||it.word;
+        const cap=document.createElement('div');
+        cap.className='cap';
+        cap.textContent=it.label||it.word;
+        box.appendChild(img); box.appendChild(cap);
+        picGridEl.appendChild(box);
       }
     }
 
-    /************ Auswahl: nur horizontal vorwärts oder vertikal vorwärts ************/
-    let selecting=false, startCell=null, previewCells=[];
+    /************ Auswahl per Ziehen/Wischen (nur vorwärts hor/ver) ************/
+    let selecting=false, startCell=null, previewEls=[];
 
-    function getCell(ev){
-      const t = ev.target.closest('.cell'); if(!t) return null;
-      return { x:+t.dataset.x, y:+t.dataset.y, el:t };
+    function cellFromEvent(ev){
+      const t=ev.target.closest('.cell'); if(!t) return null;
+      return {x:+t.dataset.x, y:+t.dataset.y, el:t};
     }
-    function clearPreview(){ previewCells.forEach(el=>el.classList.remove('preview')); previewCells=[]; }
+    function clearPreview(){ previewEls.forEach(el=>el.classList.remove('preview')); previewEls=[]; }
 
     function lineCellsLimited(x0,y0,x1,y1){
-      const dx = Math.sign(x1-x0);
-      const dy = Math.sign(y1-y0);
-
-      // nur exakt horizontal vorwärts (dx=+1, dy=0) oder vertikal vorwärts (dx=0, dy=+1)
-      if( (dx===1 && dy===0) || (dx===0 && dy===1) ){
-        const cells=[];
-        let x=x0, y=y0;
-        while(true){
-          cells.push({x,y});
-          if(x===x1 && y===y1) break;
-          x += dx; y += dy;
-        }
+      const dx=Math.sign(x1-x0), dy=Math.sign(y1-y0);
+      if( (dx===1&&dy===0) || (dx===0&&dy===1) ){
+        const cells=[]; let x=x0,y=y0;
+        while(true){ cells.push({x,y}); if(x===x1&&y===y1) break; x+=dx; y+=dy; }
         return cells;
       }
-      return []; // alles andere ignorieren
+      return [];
     }
-
     function lettersOf(cells){ return cells.map(({x,y})=>data.grid[y][x]).join(''); }
 
     function lockCells(cells){
@@ -215,53 +239,51 @@
         gridEl.children[y*SIZE+x].classList.add('locked');
       }
     }
-    function markFound(w){
-      foundWords.add(w);
-      const li = document.getElementById('w_'+w);
-      if(li) li.classList.add('found');
-      statusMsg.textContent = `${foundWords.size}/${WORDS.length} gefunden`;
+    function markFound(word){
+      foundWords.add(word);
+      const box=document.getElementById('pic_'+word);
+      if(box) box.classList.add('found');
+      statusMsg.textContent=`${foundWords.size}/${IMAGES.length} gefunden`;
     }
 
     function onDown(e){
-      const c = getCell(e); if(!c) return;
-      selecting=true; startCell=c;
-      clearPreview(); c.el.classList.add('preview'); previewCells=[c.el];
+      const c=cellFromEvent(e); if(!c) return;
+      selecting=true; startCell=c; clearPreview();
+      c.el.classList.add('preview'); previewEls=[c.el];
       e.preventDefault();
     }
     function onMove(e){
-      if(!selecting || !startCell) return;
-      const c = getCell(e); if(!c) return;
+      if(!selecting||!startCell) return;
+      const c=cellFromEvent(e); if(!c) return;
       clearPreview();
-      const cells = lineCellsLimited(startCell.x,startCell.y,c.x,c.y);
+      const cells=lineCellsLimited(startCell.x,startCell.y,c.x,c.y);
       for(const {x,y} of cells){
-        const el = gridEl.children[y*SIZE+x];
-        el.classList.add('preview');
-        previewCells.push(el);
+        const el=gridEl.children[y*SIZE+x];
+        el.classList.add('preview'); previewEls.push(el);
       }
     }
     function onUp(e){
-      if(!selecting || !startCell){ selecting=false; return; }
-      const c = getCell(e) || startCell;
-      const cells = lineCellsLimited(startCell.x,startCell.y,c.x,c.y);
-      const sel = lettersOf(cells);
+      if(!selecting||!startCell){ selecting=false; return; }
+      const c=cellFromEvent(e) || startCell;
+      const cells=lineCellsLimited(startCell.x,startCell.y,c.x,c.y);
+      const sel=lettersOf(cells);
 
       let matched=null;
       for(const w of WORDS){
         if(foundWords.has(w)) continue;
-        if(sel===w){ matched=w; break; } // nur vorwärts exakt
+        if(sel===w){ matched=w; break; }
       }
       if(matched){ lockCells(cells); markFound(matched); }
 
       clearPreview(); selecting=false; startCell=null;
-      if(foundWords.size===WORDS.length) statusMsg.textContent='🎉 Alle Wörter gefunden!';
+      if(foundWords.size===IMAGES.length) statusMsg.textContent='🎉 Alle Bilder gefunden!';
     }
 
     function addEvents(){
-      // Maus
       gridEl.addEventListener('mousedown', onDown);
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
-      // Touch
+
       gridEl.addEventListener('touchstart', (e)=>onDown(e.changedTouches[0]), {passive:false});
       gridEl.addEventListener('touchmove',  (e)=>onMove(e.changedTouches[0]),  {passive:false});
       gridEl.addEventListener('touchend',   (e)=>onUp(e.changedTouches[0]),   {passive:false});
@@ -269,16 +291,18 @@
 
     /************ Init ************/
     function init(){
-      data = buildGrid(WORDS);
-      foundWords = new Set();
-      render();
-      statusMsg.textContent = `0/${WORDS.length} gefunden`;
+      data=buildGrid(WORDS);
+      foundWords=new Set();
+      renderGrid();
+      renderPictures();
+      statusMsg.textContent=`0/${IMAGES.length} gefunden`;
     }
-    resetBtn.addEventListener('click', init);
 
+    document.getElementById('resetBtn').addEventListener('click', init);
     addEvents();
     init();
   </script>
 </body>
 </html>
+
 
