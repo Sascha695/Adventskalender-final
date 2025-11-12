@@ -3,70 +3,118 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>6. Dezember – Nikolaus im schweren Labyrinth</title>
+<title>6. Dezember – Nikolaus im sehr schweren Labyrinth</title>
 <style>
   :root{
-    --cell: 22px;     /* wird per JS dynamisch an Größe angepasst */
+    --cell: 22px;      /* wird per JS dynamisch angepasst */
     --gap: 2px;
-    --wall:#1e293b;
-    --path:#f8fafc;
-    --forest:#2e7d32;
-    --house:#ffd54f;
+    --wall:#1e293b;    /* dunkle Wand */
+    --path:#f8fafc;    /* heller Weg */
+    --forest:#2e7d32;  /* Wald außen */
+    --house:#ffd54f;   /* nur als Fallback-Farbe */
+    --player-scale: 1.1; /* Nikolaus etwas größer als die Zelle */
+    --goal-scale:   1.0; /* Hausgröße relativ zur Zelle */
   }
+
   html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#eef6f0;}
   header,footer{padding:12px 10px;text-align:center}
   h1{margin:0 0 6px}
   .sub{opacity:.85}
+
   .wrap{display:grid;place-items:center;padding:10px}
+  .bar{display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+  .bar button{
+    padding:6px 10px;border-radius:8px;border:1px solid #b8c1cc;background:#fff;font:inherit;cursor:pointer;
+  }
+
   .frame{
     padding:12px;
-    background: radial-gradient(120% 120% at 0% 0%, #3aa35744 0 40%, transparent 60%) ,
+    background: radial-gradient(120% 120% at 0% 0%, #3aa35744 0 40%, transparent 60%),
                 radial-gradient(120% 120% at 100% 100%, #3aa35733 0 40%, transparent 60%),
                 #d7f0da;
     border-radius:16px; box-shadow:0 10px 28px rgba(0,0,0,.12);
   }
-  .maze{ display:grid; grid-template-columns:repeat(var(--cols), var(--cell)); grid-auto-rows:var(--cell); gap:var(--gap); }
-  .cell{ width:var(--cell); height:var(--cell); border-radius:5px; display:grid; place-items:center; font-size:calc(var(--cell)*.62); user-select:none; }
-  .wall{ background:var(--wall); }
-  .path{ background:var(--path); }
+
+  .maze{
+    display:grid;
+    grid-template-columns:repeat(var(--cols), var(--cell));
+    grid-auto-rows:var(--cell);
+    gap:var(--gap);
+    touch-action:none;
+  }
+
+  .cell{
+    width:var(--cell); height:var(--cell);
+    border-radius:5px;
+    position:relative;
+    display:grid; place-items:center;
+    user-select:none;
+    overflow:visible; /* damit Sprite größer als Zelle sein darf */
+  }
+
+  .wall{   background:var(--wall); }
+  .path{   background:var(--path); }
   .forest{ background:var(--forest); color:#fff; }
-  .goal{ background:var(--house); position:relative; }
-  .goal::after{ content:"🏠"; position:absolute; inset:0; display:grid; place-items:center; font-size:calc(var(--cell)*.62); }
-  .player{ position:relative; }
-  .player::after{ content:"🎅"; }
+
+  /* Ziel: mit Bild oder Fallback-Haus */
+  .goal{ background:var(--house); }
+  .goal.fallback::after{
+    content:"🏠";
+    font-size:calc(var(--cell)*0.7);
+  }
+
+  /* Sprite-Container für Bild/Emoji */
+  .sprite{
+    position:absolute; inset:50% auto auto 50%;
+    transform:translate(-50%,-50%) scale(1);
+    width:calc(var(--cell) * var(--player-scale));
+    height:calc(var(--cell) * var(--player-scale));
+    display:grid; place-items:center;
+    background-repeat:no-repeat; background-size:contain; background-position:center;
+    pointer-events:none;
+  }
+  .sprite.emoji{ font-size:calc(var(--cell) * var(--player-scale)*0.9); }
+
+  .goal-sprite{
+    position:absolute; inset:50% auto auto 50%;
+    transform:translate(-50%,-50%) scale(1);
+    width:calc(var(--cell) * var(--goal-scale));
+    height:calc(var(--cell) * var(--goal-scale));
+    background-repeat:no-repeat; background-size:contain; background-position:center;
+    pointer-events:none;
+  }
+  .goal-sprite.emoji{ font-size:calc(var(--cell) * var(--goal-scale)*0.9); }
+
   .hud{ display:grid; gap:10px; justify-items:center; margin-top:12px; }
   .legend{ display:inline-grid; grid-auto-flow:column; gap:10px; padding:8px 12px; background:#ffffffaa; border-radius:10px; }
   .legend .dot{ width:14px;height:14px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle}
-  .controls{ display:grid; grid-template-areas:
+
+  .controls{
+    display:grid;
+    grid-template-areas:
       ". up ."
       "left center right"
-      ". down ."; gap:8px; touch-action:manipulation; }
-  .btn{ grid-area:center; width:56px;height:56px;border-radius:12px;border:1px solid #b8c1cc;background:#fff;font-size:22px; }
+      ". down .";
+    gap:8px; touch-action:manipulation;
+  }
+  .btn{
+    grid-area:center; width:56px;height:56px;border-radius:12px;border:1px solid #b8c1cc;background:#fff;font-size:22px;
+  }
   .btn:active{ transform:translateY(1px); }
   .up{grid-area:up}.down{grid-area:down}.left{grid-area:left}.right{grid-area:right}
+
   .win{display:none; padding:10px 14px; background:#fff3cd; border:1px solid #ffe08a; border-radius:10px;}
-  .bar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center}
-  select,button.small{
-    padding:6px 10px; border-radius:8px; border:1px solid #b8c1cc; background:#fff; font:inherit; cursor:pointer;
-  }
 </style>
 </head>
 <body>
 <header>
-  <h1>6. Dezember – Nikolaus im schweren Labyrinth</h1>
-  <div class="sub">Bringe den Nikolaus 🎅 vom Wald außen zum gelben Haus 🏠 in der Mitte.</div>
+  <h1>6. Dezember – Nikolaus im sehr schweren Labyrinth</h1>
+  <div class="sub">Bringe den Nikolaus vom Wald außen zum Haus in der Mitte. Viel Erfolg!</div>
 </header>
 
 <main class="wrap">
   <div class="bar">
-    <label>Schwierigkeit:
-      <select id="size">
-        <option value="31" selected>Schwer (31×31)</option>
-        <option value="41">Sehr schwer (41×41)</option>
-        <option value="25">Mittel (25×25)</option>
-      </select>
-    </label>
-    <button class="small" id="regen">Neu erzeugen</button>
+    <button id="regen">Neu erzeugen</button>
   </div>
 
   <div class="frame">
@@ -78,7 +126,7 @@
       <span><span class="dot" style="background:var(--forest)"></span>Wald</span>
       <span><span class="dot" style="background:var(--path)"></span>Weg</span>
       <span><span class="dot" style="background:var(--wall)"></span>Wand</span>
-      <span><span class="dot" style="background:var(--house)"></span>Ziel</span>
+      <span>Ziel</span>
       <span>🎅 Du</span>
     </div>
 
@@ -98,22 +146,29 @@
 
 <script>
 /* ==============================
-   MAZE GENERATOR (Backtracker)
+   Einstellungen für Bilder
+   ============================== */
+/* Setze hier (oder per data-Attributen) deine Bild-URLs.
+   Wenn leer, werden Emojis genutzt. */
+const playerImageURL = ""; // z.B. "assets/nikolaus.png"
+const goalImageURL   = ""; // z.B. "assets/gelbes-haus.png"
+
+/* ==============================
+   MAZE GENERATOR – sehr schwer
+   Größe: 49x49 (innen), plus Wald-Ring
    ============================== */
 const FOREST = 2, WALL = 1, PATH = 0;
-let GRID = 0, SIZE = 31; // innere, ungerade Anzahl
+const SIZE = 49;  // ungerade, groß = schwer
+let GRID = 0;
 let grid, position, goal;
 
 const mazeEl = document.getElementById('maze');
-const sizeSel = document.getElementById('size');
 const regenBtn = document.getElementById('regen');
 
-sizeSel.addEventListener('change', () => { SIZE = parseInt(sizeSel.value,10); generateAndDraw(); });
 regenBtn.addEventListener('click', generateAndDraw);
 
 function generateAndDraw(){
-  // GRID = inner size + 2 (äußerer Wald-Ring)
-  GRID = SIZE + 2;
+  GRID = SIZE + 2; // + Wald-Ring
   document.documentElement.style.setProperty('--cols', GRID);
   fitCellSize();
   ({grid, position, goal} = buildMaze(SIZE));
@@ -122,46 +177,46 @@ function generateAndDraw(){
 }
 
 function fitCellSize(){
-  // Dynamische Zellgröße, damit das Labyrinth immer gut sichtbar bleibt
-  const maxWidth = Math.min(window.innerWidth - 32, 1100);
+  // Dynamisch so groß wie möglich, aber noch gut bedienbar
+  const maxWidth = Math.min(window.innerWidth - 32, 1200);
   const maxCell = Math.floor((maxWidth) / GRID) - 1;
   const cell = Math.max(14, Math.min(28, maxCell));
   document.documentElement.style.setProperty('--cell', cell + 'px');
 }
 window.addEventListener('resize', fitCellSize);
 
+/* Generator: Iterativer Recursive Backtracker (Perfect Maze)
+   -> Viele Sackgassen = schwer.
+   Zusätzlich: „Sparsam mischen“ für weniger lange Korridore (etwas schwerer). */
 function buildMaze(n){
-  // n muss ungerade sein
   if (n % 2 === 0) n -= 1;
-
-  // Arbeitsgitter für den Generator (nur innerer Bereich)
   const rows = n, cols = n;
-  const carve = Array.from({length: rows}, (_,r) =>
-    Array.from({length: cols}, _ => WALL)
-  );
+  const carve = Array.from({length: rows}, () => Array.from({length: cols}, () => WALL));
 
-  // Hilfsfunktionen
   const inBounds = (r,c) => r>0 && c>0 && r<rows-1 && c<cols-1;
 
-  // Startpunkt für Generator: oben mittig (nahe Eingang)
   let sr = 1, sc = Math.floor(cols/2);
   carve[sr][sc] = PATH;
 
-  // Rekursiver Backtracker (iterativ)
   const stack = [[sr,sc]];
   const dirs = [[-2,0],[2,0],[0,-2],[0,2]];
   while (stack.length){
     const [r,c] = stack[stack.length-1];
+
+    // Nachbarn sammeln
     const neighbors = [];
     for (const [dr,dc] of dirs){
       const nr=r+dr, nc=c+dc;
       if (inBounds(nr,nc) && carve[nr][nc]===WALL){
-        neighbors.push([nr,nc, dr/2, dc/2]); // Zwischenschritt
+        neighbors.push([nr,nc, dr/2, dc/2]);
       }
     }
+
     if (neighbors.length){
-      const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
-      const [nr,nc, mr,mc] = pick;
+      // leicht „anti-korridor“: mischen, aber sanft bevorzugen, die Richtung zu wechseln
+      neighbors.sort(()=>Math.random()-0.5);
+      const pick = neighbors[0];
+      const [nr,nc,mr,mc] = pick;
       carve[r+mr][c+mc] = PATH;
       carve[nr][nc] = PATH;
       stack.push([nr,nc]);
@@ -170,46 +225,71 @@ function buildMaze(n){
     }
   }
 
-  // Großes Grid inkl. Wald-Ring bauen
+  // Großes Grid plus Wald
   const big = Array.from({length: n+2}, (_,r) =>
     Array.from({length: n+2}, (_,c) => {
-      if (r===0 || c===0 || r===n+1 || c===n+1) return FOREST; // Wald außen
+      if (r===0 || c===0 || r===n+1 || c===n+1) return FOREST;
       return carve[r-1][c-1]===WALL ? WALL : PATH;
     })
   );
 
-  // Eingang unten dem Start öffnen
+  // Eingang unterhalb des Starts öffnen
   const entranceCol = Math.floor((n+2)/2);
   big[1][entranceCol] = PATH;
 
-  // Ziel exakt in die Mitte (global) setzen
-  const g = { r: Math.floor((n+2)/2), c: Math.floor((n+2)/2) };
-
-  // Startposition: im Wald oben, vor dem Eingang
+  // Start im Wald oben, Ziel exakt Mitte
   const start = { r: 0, c: entranceCol };
+  const g = { r: Math.floor((n+2)/2), c: Math.floor((n+2)/2) };
 
   return { grid: big, position: start, goal: g };
 }
 
 /* ==============================
-   RENDER & CONTROLS
+   Render
    ============================== */
 function draw(){
   mazeEl.innerHTML = '';
   for (let r=0; r<GRID; r++){
     for (let c=0; c<GRID; c++){
-      const d = document.createElement('div');
+      const cell = document.createElement('div');
       const v = grid[r][c];
-      if (r===goal.r && c===goal.c) d.className = 'cell goal';
-      else if (v===WALL) d.className = 'cell wall';
-      else if (v===FOREST) d.className = 'cell forest';
-      else d.className = 'cell path';
+
+      if (r===goal.r && c===goal.c){
+        cell.className = 'cell goal';
+        // Zielbild oder Emoji
+        if (goalImageURL){
+          const s = document.createElement('div');
+          s.className = 'goal-sprite';
+          s.style.backgroundImage = `url('${goalImageURL}')`;
+          cell.appendChild(s);
+        } else {
+          cell.classList.add('fallback'); // gelbes Haus als Emoji
+        }
+      } else if (v===WALL) {
+        cell.className = 'cell wall';
+      } else if (v===FOREST) {
+        cell.className = 'cell forest';
+      } else {
+        cell.className = 'cell path';
+      }
 
       if (r===position.r && c===position.c){
-        d.classList.add('player');
-        d.tabIndex = 0;
+        // Spieler: Bild oder Emoji
+        const s = document.createElement('div');
+        if (playerImageURL){
+          s.className = 'sprite';
+          s.style.backgroundImage = `url('${playerImageURL}')`;
+        } else {
+          s.className = 'sprite emoji';
+          s.textContent = '🎅';
+        }
+        s.setAttribute('aria-hidden','true');
+        cell.classList.add('player');
+        cell.tabIndex = 0;
+        cell.appendChild(s);
       }
-      mazeEl.appendChild(d);
+
+      mazeEl.appendChild(cell);
     }
   }
   focusPlayer();
@@ -220,12 +300,14 @@ function focusPlayer(){
   if (p) p.focus({preventScroll:true});
 }
 
+/* ==============================
+   Bewegung & Win
+   ============================== */
 function canMove(r,c){
   if (r<0||c<0||r>=GRID||c>=GRID) return false;
   if (grid[r][c]===WALL) return false;
   return true; // Weg oder Wald
 }
-
 function move(dr,dc){
   const nr = position.r + dr;
   const nc = position.c + dc;
@@ -234,7 +316,6 @@ function move(dr,dc){
   draw();
   checkWin();
 }
-
 function checkWin(){
   if (position.r===goal.r && position.c===goal.c){
     document.getElementById('win').style.display = 'block';
@@ -243,14 +324,14 @@ function checkWin(){
   }
 }
 
-function detachControls(){
-  document.removeEventListener('keydown', keyHandler);
-  mazeEl.removeEventListener('touchstart', onTouchStart, {passive:false});
-  mazeEl.removeEventListener('touchend', onTouchEnd, {passive:false});
-  up.onclick = down.onclick = left.onclick = right.onclick = null;
-}
+/* ==============================
+   Controls
+   ============================== */
+const upBtn    = document.querySelector('.up');
+const downBtn  = document.querySelector('.down');
+const leftBtn  = document.querySelector('.left');
+const rightBtn = document.querySelector('.right');
 
-/* Keyboard */
 function keyHandler(e){
   const k = e.key.toLowerCase();
   if (['arrowup','w'].includes(k))      move(-1,0);
@@ -259,7 +340,6 @@ function keyHandler(e){
   else if (['arrowright','d'].includes(k)) move(0,1);
 }
 
-/* Touch (Swipe) */
 let sx=0, sy=0, st=0;
 const SWIPE_MIN=22, SWIPE_MAXT=600;
 function onTouchStart(e){
@@ -274,24 +354,34 @@ function onTouchEnd(e){
   if (Math.abs(dx)>Math.abs(dy)) move(0, dx>0?1:-1); else move(dy>0?1:-1, 0);
 }
 
-/* D-Pad */
-const up    = document.querySelector('.up');
-const down  = document.querySelector('.down');
-const left  = document.querySelector('.left');
-const right = document.querySelector('.right');
-
 function attachControls(){
+  detachControls(); // doppelte Listener vermeiden
   document.addEventListener('keydown', keyHandler);
   mazeEl.addEventListener('touchstart', onTouchStart, {passive:false});
   mazeEl.addEventListener('touchend', onTouchEnd, {passive:false});
-  up.onclick    = ()=>move(-1,0);
-  down.onclick  = ()=>move(1,0);
-  left.onclick  = ()=>move(0,-1);
-  right.onclick = ()=>move(0,1);
+  upBtn.onclick    = ()=>move(-1,0);
+  downBtn.onclick  = ()=>move(1,0);
+  leftBtn.onclick  = ()=>move(0,-1);
+  rightBtn.onclick = ()=>move(0,1);
+}
+function detachControls(){
+  document.removeEventListener('keydown', keyHandler);
+  mazeEl.removeEventListener('touchstart', onTouchStart, {passive:false});
+  mazeEl.removeEventListener('touchend', onTouchEnd, {passive:false});
+  upBtn.onclick = downBtn.onclick = leftBtn.onclick = rightBtn.onclick = null;
 }
 
 /* Init */
 generateAndDraw();
+
+/* ==============================
+   Tipp: Bilder austauschen
+   - Setze oben playerImageURL & goalImageURL.
+   - PNG/WebP mit Transparenz sehen am besten aus.
+   - Passe auf Wunsch die Größen an:
+       :root { --player-scale: 1.3; --goal-scale: 1.1; }
+   ============================== */
 </script>
 </body>
 </html>
+
