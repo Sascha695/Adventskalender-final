@@ -11,29 +11,48 @@
     --forest:#166534; --house:#ffd54f; --grid-outline:#00000033;
     --player-scale: 1.2; --goal-scale: 1.05;
   }
+
+  /* Fixierter Hintergrund als eigene Ebene (funktioniert stabil mobil) */
+  .bg-fixed{
+    position:fixed; inset:0; z-index:0;
+    background-repeat:no-repeat;
+    background-size:75% auto;          /* 75% Zoom */
+    background-position:50% 18%;       /* Y = 18% */
+    background-attachment:fixed;       /* falls Browser das respektiert */
+  }
+  /* leichte Abdunklung darüber (unter Content) */
+  .bg-overlay{ position:fixed; inset:0; pointer-events:none; background:linear-gradient(0deg, rgba(0,0,0,.16), rgba(0,0,0,.16)); z-index:0; }
+
+  /* Gesamter Inhalt liegt über dem Hintergrund */
   body{
     margin:0;height:100%;
     font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    background:#e8f3ea;color:#111;
-    /* wird per JS auf 75% gesetzt; diese Defaults sind egal */
-    background-size:cover;
-    background-position:center;
-    background-attachment:fixed;
+    color:#111;
+    background:none; /* wichtig: kein Body-Background mehr */
   }
-  .bg-overlay{ position:fixed; inset:0; pointer-events:none; background:linear-gradient(0deg, rgba(0,0,0,.16), rgba(0,0,0,.16)); z-index:-1; }
+  header,main,footer{ position:relative; z-index:1; }
   header,footer{padding:10px 8px; text-align:center}
+
   h1{margin:0 0 6px; font-size:1.1rem}
   .sub{opacity:.9; font-size:.95rem}
   .intro{margin:8px auto 0; max-width:800px; padding:8px 10px; background:#fff; border:1px solid #dbe2ea; border-radius:10px; line-height:1.35;}
+
   .wrap{display:grid; place-items:center; padding:8px; gap:8px}
   .bar{display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap}
   .bar button{padding:8px 12px; border-radius:10px; border:1px solid #b8c1cc; background:#fff; font:inherit; cursor:pointer;}
-  .frame{ padding:6px; border-radius:14px; background:rgba(255,255,255,.65);
-          box-shadow:0 10px 28px rgba(0,0,0,.18), inset 0 0 0 2px var(--grid-outline);
-          max-width:100vw; max-height:calc(100vh - 220px); overflow:auto; }
-  .maze{ display:grid; grid-template-columns:repeat(var(--cols), var(--cell)); grid-auto-rows:var(--cell);
-         gap:var(--gap); touch-action: pan-y; outline:2px solid var(--grid-outline); outline-offset:4px;
-         background:#fafafaAA; border-radius:10px; isolation:isolate; }
+
+  /* Frame scrollt NICHT mehr intern – so passt das Grid immer voll ins Sichtfenster */
+  .frame{
+    padding:6px; border-radius:14px; background:rgba(255,255,255,.65);
+    box-shadow:0 10px 28px rgba(0,0,0,.18), inset 0 0 0 2px var(--grid-outline);
+    max-width:100vw; overflow:visible;
+  }
+  .maze{
+    display:grid; grid-template-columns:repeat(var(--cols), var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); touch-action: pan-y; outline:2px solid var(--grid-outline); outline-offset:4px;
+    background:#fafafaAA; border-radius:10px; isolation:isolate;
+  }
+
   .cell{ width:var(--cell); height:var(--cell); border-radius:4px; position:relative; display:grid; place-items:center;
          user-select:none; overflow:visible; box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);}
   .wall{background:var(--wall)} .path{background:var(--path)} .path.dim{background:var(--path-dim)} .forest{background:var(--forest)}
@@ -49,14 +68,45 @@
   .controls{ display:grid; grid-template-areas: ". up ." "left center right" ". down ."; gap:8px; touch-action:none; }
   .btn{ grid-area:center; width:52px;height:52px;border-radius:12px;border:1px solid #b8c1cc;background:#fff;font-size:20px; }
   .btn:active{ transform:translateY(1px); } .up{grid-area:up}.down{grid-area:down}.left{grid-area:left}.right{grid-area:right}
+
   @media (max-width:400px){
-    .frame{ max-height: calc(100vh - 200px); }
     .btn{ width:46px; height:46px; font-size:18px; }
   }
+
+  /* === Party-Overlay === */
+  .party{
+    position:fixed; inset:0; display:none; place-items:center;
+    pointer-events:none; z-index:999;
+  }
+  .party.show{ display:grid; }
+  .party .message{
+    background:rgba(255,255,255,.95);
+    border:1px solid #e6e6e6;
+    border-radius:16px;
+    padding:14px 20px;
+    font-weight:700;
+    font-size:1.15rem;
+    box-shadow:0 10px 26px rgba(0,0,0,.18);
+    transform:translateY(-30px);
+    animation: fly-in .6s ease-out forwards, pop 1.6s ease-in-out 0.6s 2;
+    text-align:center;
+  }
+  @keyframes fly-in{ to{ transform:translateY(0); opacity:1; } from{ transform:translateY(-30px); opacity:0; } }
+  @keyframes pop{ 0%{ transform:scale(1); } 40%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
+
+  .confetti{ position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:998; }
+  .confetti .piece{
+    position:absolute; width:10px; height:16px; will-change: transform, opacity; opacity:.9; border-radius:2px; animation: fall linear forwards;
+  }
+  @keyframes fall{ 0%{ transform: translate(var(--sx,0), -10vh) rotate(0deg); opacity:1; }
+                   100%{ transform: translate(var(--ex,0), 110vh) rotate(720deg); opacity:0.9; } }
 </style>
 </head>
 <body>
-<div class="bg-overlay"></div>
+
+<!-- Fixierter Hintergrund & Overlay -->
+<div id="bg" class="bg-fixed" aria-hidden="true"></div>
+<div class="bg-overlay" aria-hidden="true"></div>
 
 <header>
   <h1>6. Dezember – Nikolaus im harten Labyrinth</h1>
@@ -87,16 +137,25 @@
 
 <footer><p><a href="index.html">Zurück zum Kalender</a></p></footer>
 
+<!-- Party Layer -->
+<div id="confetti" class="confetti" aria-hidden="true"></div>
+<div id="party" class="party" role="status" aria-live="polite">
+  <div class="message" id="partyMsg">🎉 Geschafft! Nikolaus hat das Haus gefunden. Merke dir den Buchstaben: <strong>N</strong> 🎉</div>
+</div>
+
 <script>
 /* ==== Bilder ==== */
 const backgroundImageURL = "assets/nikolaus_map.png";
 const playerImageURL     = ""; // z.B. "assets/nikolaus.png"
 const goalImageURL       = ""; // z.B. "assets/gelbes-haus.png"
+const bgEl               = document.getElementById('bg');
+
 if (backgroundImageURL){
   const safeURL = encodeURI(backgroundImageURL);
-  document.body.style.backgroundImage  = `url('${safeURL}')`;
-  document.body.style.backgroundSize   = '100% auto';   // << fest auf 75%
-  document.body.style.backgroundPosition = '50% 18%';  // << zentriert
+  // Hintergrund auf FIXIERTE Ebene setzen (nicht auf body)
+  bgEl.style.backgroundImage   = `url('${safeURL}')`;
+  bgEl.style.backgroundSize    = '75% auto';   // 75 %
+  bgEl.style.backgroundPosition= '50% 18%';    // Y=18 %
 }
 
 /* ==== Dein Level verwenden ==== */
@@ -131,8 +190,6 @@ const LEVEL = [
  [1,1,0,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1,1],
  [1,1,0,0,0,0,0,0,0,0,1,1,0,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,1],
  [1,1,0,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,1],
- [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
- /* zusätzliche Rand-Zeile */
  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
@@ -158,6 +215,9 @@ const upBtn    = document.querySelector('.up');
 const downBtn  = document.querySelector('.down');
 const leftBtn  = document.querySelector('.left');
 const rightBtn = document.querySelector('.right');
+const partyEl  = document.getElementById('party');
+const partyMsg = document.getElementById('partyMsg');
+const confettiEl = document.getElementById('confetti');
 
 /* Events */
 regenBtn.addEventListener('click', generateAndDraw);
@@ -168,6 +228,7 @@ fogBtn.addEventListener('click', () => {
   draw();
 });
 window.addEventListener('resize', ()=>fitCellSize(true));
+partyEl.addEventListener('click', hideParty);
 
 /* Init */
 generateAndDraw();
@@ -300,27 +361,33 @@ function buildBigGrid(carve, entranceColBig, mid){
 
 /* ==== Sizing ==== */
 function fitCellSize(onlySize){
-  const headerH = document.querySelector('header')?.offsetHeight || 0;
-  const bars = [...document.querySelectorAll('.bar')].reduce((h,el)=>h+el.offsetHeight,0);
+  // verfügbare Größe: echtes sichtbares Viewportmaß (mobil-freundlich)
+  const vh = window.visualViewport ? window.visualViewport.height : Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+  const vw = window.visualViewport ? window.visualViewport.width  : Math.max(document.documentElement.clientWidth,  window.innerWidth  || 0);
+
+  const headerH   = document.querySelector('header')?.offsetHeight || 0;
+  const bars      = [...document.querySelectorAll('.bar')].reduce((h,el)=>h+el.offsetHeight,0);
   const controlsH = document.querySelector('.controls')?.offsetHeight || 0;
-  const winH    = document.getElementById('win')?.offsetHeight    || 0;
+  const winH      = document.getElementById('win')?.offsetHeight || 0;
 
-  const vw = Math.max(document.documentElement.clientWidth,  window.innerWidth  || 0);
-  const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-
+  // Wir wollen, dass das ganze Grid OHNE internes Scrollen sichtbar ist:
   const availW = Math.max(200, vw - 20);
   const availH = Math.max(200, vh - (headerH + bars + controlsH + winH + 20));
 
   const cols = GRID || parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cols')) || 1;
+
+  // Zelle so berechnen, dass Grid in beide Richtungen passt
   const cellByW = Math.floor(availW / cols) - 1;
   const cellByH = Math.floor(availH / cols) - 1;
 
-  const cell = Math.max(10, Math.min(22, Math.min(cellByW, cellByH)));
+  const cell = Math.max(8, Math.min(22, Math.min(cellByW, cellByH))); // erlaubt kleiner auf Handy
   const gap  = cell < 16 ? 1 : 2;
 
   document.documentElement.style.setProperty('--cell', cell + 'px');
   document.documentElement.style.setProperty('--gap',  gap  + 'px');
-  frameEl.style.maxHeight = Math.max(160, availH) + 'px';
+
+  // Frame soll nicht eigene Scrollbarkeit erzwingen
+  frameEl.style.maxHeight = 'none';
 
   if (!onlySize && GRID){ draw(); }
 }
@@ -404,6 +471,41 @@ function focusPlayer(){
   if (p) p.focus({preventScroll:true});
 }
 
+/* ==== Party ==== */
+let partyTimeout;
+function showParty(){
+  partyMsg.innerHTML = "🎉 Geschafft! Nikolaus hat das Haus gefunden. Merke dir den Buchstaben: <strong>N</strong> 🎉";
+  partyEl.classList.add('show');
+  spawnConfetti(140);
+  clearTimeout(partyTimeout);
+  partyTimeout = setTimeout(hideParty, 4500);
+}
+function hideParty(){
+  partyEl.classList.remove('show');
+  confettiEl.innerHTML = '';
+}
+function spawnConfetti(n=120){
+  confettiEl.innerHTML = '';
+  const colors = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#22c55e','#eab308'];
+  const vw = window.innerWidth;
+  for (let i=0;i<n;i++){
+    const d = document.createElement('div');
+    d.className = 'piece';
+    d.style.background = colors[i % colors.length];
+    const startX = Math.random()*vw;
+    const endX   = startX + (Math.random()*200 - 100);
+    d.style.left = startX + 'px';
+    d.style.setProperty('--sx', '0px');
+    d.style.setProperty('--ex', (endX - startX) + 'px');
+    d.style.animationDuration = (2500 + Math.random()*1200) + 'ms';
+    d.style.animationDelay = (Math.random()*200) + 'ms';
+    const w = 8 + Math.random()*8, h = 10 + Math.random()*18;
+    d.style.width = w + 'px'; d.style.height = h + 'px';
+    d.style.transform = `translate(0,-10vh) rotate(${Math.random()*60-30}deg)`;
+    confettiEl.appendChild(d);
+  }
+}
+
 /* Bewegung & Win */
 function canMove(r,c){ return !(r<0||c<0||r>=GRID||c>=GRID) && grid[r][c]!==WALL; }
 function move(dr,dc){
@@ -416,6 +518,7 @@ function move(dr,dc){
     document.getElementById('win').style.display='block';
     document.getElementById('letter').textContent='N';
     detachControls();
+    showParty();
   }
 }
 
