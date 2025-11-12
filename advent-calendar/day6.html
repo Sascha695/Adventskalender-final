@@ -36,9 +36,32 @@
       font:700 1.05rem/1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       background:#fff8ee; position:relative;
       box-shadow: inset 0 1px 0 rgba(0,0,0,.25), inset 1px 0 0 rgba(0,0,0,.25);
+      transition: background .12s ease, box-shadow .12s ease, transform .12s ease, font-size .12s ease;
     }
-    .cell.preview{ background:#ffe3d7; }
+
     .cell.locked{ background:#e8fbf0; }
+
+    /* Deutlichere Hervorhebung auf Touch-Geräten */
+    .cell.preview{
+      background:#ffd9cc;                 
+      box-shadow: inset 0 0 0 2px #ff936f; 
+    }
+    .cell.current{
+      background:#ffbe9f;
+      box-shadow:
+        inset 0 0 0 2px #ff6a3d,
+        0 0 0 3px rgba(197,76,61,.15);
+      transform: scale(1.02);
+      z-index: 1;
+      font-weight:900;
+      text-shadow:0 1px 0 rgba(255,255,255,.7);
+    }
+
+    @media (max-width:700px){
+      .cell{ font-size:1.2rem; }
+      .cell.preview{ font-size:1.25rem; }
+      .cell.current{ font-size:1.35rem; }
+    }
 
     /* Bilder-Tafel */
     .pics h2{ margin:.2rem 0 .6rem; }
@@ -104,23 +127,22 @@
     </div>
   </main>
 
-  <!-- FUNKTIONIERENDER SCRIPT mit Touch-Unterstützung -->
   <script>
     const IMAGES = [
-      { word:"GESCHENK",     src:"assets/geschenk.png",     label:"Geschenk" },
-      { word:"DREIKOENIGE",  src:"assets/dreikoenige.png",  label:"Drei Könige" },
-      { word:"NIKOLAUS",     src:"assets/nikolaus.png",     label:"Nikolaus" },
-      { word:"RENTIER",      src:"assets/rentier.png",      label:"Rentier" },
-      { word:"SCHLITTEN",    src:"assets/schlitten.png",    label:"Schlitten" },
-      { word:"KERZE",        src:"assets/kerze.png",        label:"Kerze" },
-      { word:"TANNENBAUM",   src:"assets/tannenbaum.png",   label:"Tannenbaum" },
-      { word:"KRIPPE",       src:"assets/krippe.png",       label:"Krippe" },
-      { word:"STERN",        src:"assets/stern.png",        label:"Stern" },
-      { word:"KEKSE",        src:"assets/kekse.png",        label:"Kekse" },
-      { word:"GLOCKEN",      src:"assets/glocken.png",      label:"Glocken" },
-      { word:"SCHNEEMANN",   src:"assets/schneemann.png",   label:"Schneemann" }
+      { word:"GESCHENK", src:"assets/geschenk.png", label:"Geschenk" },
+      { word:"DREIKOENIGE", src:"assets/dreikoenige.png", label:"Drei Könige" },
+      { word:"NIKOLAUS", src:"assets/nikolaus.png", label:"Nikolaus" },
+      { word:"RENTIER", src:"assets/rentier.png", label:"Rentier" },
+      { word:"SCHLITTEN", src:"assets/schlitten.png", label:"Schlitten" },
+      { word:"KERZE", src:"assets/kerze.png", label:"Kerze" },
+      { word:"TANNENBAUM", src:"assets/tannenbaum.png", label:"Tannenbaum" },
+      { word:"KRIPPE", src:"assets/krippe.png", label:"Krippe" },
+      { word:"STERN", src:"assets/stern.png", label:"Stern" },
+      { word:"KEKSE", src:"assets/kekse.png", label:"Kekse" },
+      { word:"GLOCKEN", src:"assets/glocken.png", label:"Glocken" },
+      { word:"SCHNEEMANN", src:"assets/schneemann.png", label:"Schneemann" }
     ];
-    const WORDS = IMAGES.map(i => i.word);
+    const WORDS = IMAGES.map(i=>i.word);
     const SIZE = 15;
     const FILL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -129,25 +151,25 @@
     const statusMsg = document.getElementById('statusMsg');
     const resetBtn = document.getElementById('resetBtn');
 
-    function emptyGrid(){ return Array.from({length:SIZE},()=>Array(SIZE).fill(null)); }
-    const DIRS = [[1,0],[0,1]];
+    function emptyGrid(){return Array.from({length:SIZE},()=>Array(SIZE).fill(null));}
+    const DIRS=[[1,0],[0,1]];
 
-    function tryPlace(grid, word){
-      for(let t=0; t<300; t++){
-        const [dx,dy] = DIRS[Math.floor(Math.random()*DIRS.length)];
-        const len = word.length;
-        const maxX = dx ? SIZE - len : SIZE;
-        const maxY = dy ? SIZE - len : SIZE;
-        const x0 = Math.floor(Math.random()*maxX);
-        const y0 = Math.floor(Math.random()*maxY);
-        let ok = true;
+    function tryPlace(grid,word){
+      for(let t=0;t<300;t++){
+        const [dx,dy]=DIRS[Math.floor(Math.random()*DIRS.length)];
+        const len=word.length;
+        const maxX=dx?SIZE-len:SIZE;
+        const maxY=dy?SIZE-len:SIZE;
+        const x0=Math.floor(Math.random()*maxX);
+        const y0=Math.floor(Math.random()*maxY);
+        let ok=true;
         for(let i=0;i<len;i++){
-          const x=x0+dx*i, y=y0+dy*i;
+          const x=x0+dx*i,y=y0+dy*i;
           const c=grid[y][x];
-          if(c && c!==word[i]){ ok=false; break; }
+          if(c&&c!==word[i]){ok=false;break;}
         }
-        if(!ok) continue;
-        for(let i=0;i<len;i++){ grid[y0+dy*i][x0+dx*i]=word[i]; }
+        if(!ok)continue;
+        for(let i=0;i<len;i++){grid[y0+dy*i][x0+dx*i]=word[i];}
         return true;
       }
       return false;
@@ -162,16 +184,16 @@
       return grid;
     }
 
-    let data, foundWords;
+    let data,foundWords;
 
     function renderGrid(){
-      gridEl.style.setProperty('--size', SIZE);
+      gridEl.style.setProperty('--size',SIZE);
       gridEl.innerHTML='';
       for(let y=0;y<SIZE;y++){
         for(let x=0;x<SIZE;x++){
           const d=document.createElement('div');
           d.className='cell';
-          d.dataset.x=x; d.dataset.y=y;
+          d.dataset.x=x;d.dataset.y=y;
           d.textContent=data[y][x];
           gridEl.appendChild(d);
         }
@@ -182,87 +204,100 @@
       picGridEl.innerHTML='';
       for(const it of IMAGES){
         const box=document.createElement('div');
-        box.className='pic'; box.id='pic_'+it.word;
+        box.className='pic';box.id='pic_'+it.word;
         const img=document.createElement('img');
-        img.src=it.src; img.alt=it.label||it.word;
+        img.src=it.src;img.alt=it.label||it.word;
         const cap=document.createElement('div');
-        cap.className='cap'; cap.textContent=it.label||it.word;
-        box.appendChild(img); box.appendChild(cap);
+        cap.className='cap';cap.textContent=it.label||it.word;
+        box.appendChild(img);box.appendChild(cap);
         picGridEl.appendChild(box);
       }
     }
 
-    /* Pointer Events */
-    let selecting=false, startCell=null, previewEls=[], activePointerId=null;
-
+    /* Pointer Events mit Hervorhebung und Haptik */
+    let selecting=false,startCell=null,previewEls=[],activePointerId=null,currentEl=null;
     function cellFromPoint(x,y){
       const el=document.elementFromPoint(x,y);
-      const cell=el && el.closest('.cell');
-      return cell ? {x:+cell.dataset.x,y:+cell.dataset.y,el:cell}:null;
+      const cell=el&&el.closest('.cell');
+      return cell?{x:+cell.dataset.x,y:+cell.dataset.y,el:cell}:null;
     }
-    function clearPreview(){ previewEls.forEach(el=>el.classList.remove('preview')); previewEls=[]; }
+    function clearPreview(){
+      previewEls.forEach(el=>el.classList.remove('preview'));
+      previewEls=[];
+      if(currentEl){currentEl.classList.remove('current');currentEl=null;}
+    }
     function lineCells(x0,y0,x1,y1){
-      const dx=Math.sign(x1-x0), dy=Math.sign(y1-y0);
+      const dx=Math.sign(x1-x0),dy=Math.sign(y1-y0);
       if((dx===1&&dy===0)||(dx===0&&dy===1)){
-        const out=[]; let x=x0,y=y0;
-        while(true){ out.push({x,y}); if(x===x1&&y===y1) break; x+=dx; y+=dy; }
+        const out=[];let x=x0,y=y0;
+        while(true){out.push({x,y});if(x===x1&&y===y1)break;x+=dx;y+=dy;}
         return out;
       }
       return [];
     }
-    function lettersOf(cells){ return cells.map(({x,y})=>data[y][x]).join(''); }
-    function lockCells(cells){ cells.forEach(({x,y})=>gridEl.children[y*SIZE+x].classList.add('locked')); }
+    function lettersOf(cells){return cells.map(({x,y})=>data[y][x]).join('');}
+    function lockCells(cells){cells.forEach(({x,y})=>gridEl.children[y*SIZE+x].classList.add('locked'));}
     function markFound(w){
       foundWords.add(w);
       document.getElementById('pic_'+w)?.classList.add('found');
       statusMsg.textContent=`${foundWords.size}/${IMAGES.length} gefunden`;
     }
+    function vibrate(ms){try{if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
 
     function onDown(e){
-      if(e.button!==undefined && e.button!==0) return;
-      const c=e.target.closest('.cell'); if(!c) return;
-      startCell={x:+c.dataset.x,y:+c.dataset.y,el:c};
-      selecting=true; activePointerId=e.pointerId;
-      clearPreview(); c.classList.add('preview'); previewEls=[c];
+      if(e.button!==undefined&&e.button!==0)return;
+      const t=e.target.closest('.cell');if(!t)return;
+      startCell={x:+t.dataset.x,y:+t.dataset.y,el:t};
+      selecting=true;activePointerId=e.pointerId;
+      clearPreview();
+      t.classList.add('preview','current');
+      previewEls=[t];currentEl=t;
       gridEl.setPointerCapture(activePointerId);
+      vibrate(8);
       e.preventDefault();
     }
     function onMove(e){
-      if(!selecting||e.pointerId!==activePointerId) return;
-      const c=cellFromPoint(e.clientX,e.clientY) || startCell;
-      clearPreview();
+      if(!selecting||e.pointerId!==activePointerId)return;
+      const c=cellFromPoint(e.clientX,e.clientY)||startCell;
+      previewEls.forEach(el=>el.classList.remove('preview'));
+      previewEls=[];
       const cells=lineCells(startCell.x,startCell.y,c.x,c.y);
       for(const {x,y} of cells){
         const el=gridEl.children[y*SIZE+x];
-        el.classList.add('preview'); previewEls.push(el);
+        el.classList.add('preview');previewEls.push(el);
+      }
+      if(currentEl!==gridEl.children[c.y*SIZE+c.x]){
+        currentEl?.classList.remove('current');
+        currentEl=gridEl.children[c.y*SIZE+c.x];
+        currentEl.classList.add('current');
       }
     }
     function onUp(e){
-      if(!selecting||e.pointerId!==activePointerId) return;
+      if(!selecting||e.pointerId!==activePointerId)return;
       const c=cellFromPoint(e.clientX,e.clientY)||startCell;
       const cells=lineCells(startCell.x,startCell.y,c.x,c.y);
       const sel=lettersOf(cells);
       const match=WORDS.find(w=>!foundWords.has(w)&&w===sel);
-      if(match){ lockCells(cells); markFound(match); }
-      clearPreview(); selecting=false; gridEl.releasePointerCapture(activePointerId);
-      if(foundWords.size===IMAGES.length) statusMsg.textContent='🎉 Alle Bilder gefunden!';
+      if(match){lockCells(cells);markFound(match);vibrate(25);}
+      clearPreview();selecting=false;gridEl.releasePointerCapture(activePointerId);
+      if(foundWords.size===IMAGES.length)statusMsg.textContent='🎉 Alle Bilder gefunden!';
     }
 
     function addEvents(){
-      gridEl.addEventListener('pointerdown',onDown);
-      gridEl.addEventListener('pointermove',onMove);
-      gridEl.addEventListener('pointerup',onUp);
-      gridEl.addEventListener('pointercancel',onUp);
+      gridEl.addEventListener('pointerdown',onDown,{passive:false});
+      gridEl.addEventListener('pointermove',onMove,{passive:false});
+      gridEl.addEventListener('pointerup',onUp,{passive:false});
+      gridEl.addEventListener('pointercancel',onUp,{passive:false});
     }
 
     function init(){
-      data=buildGrid(WORDS); foundWords=new Set();
-      renderGrid(); renderPictures();
+      data=buildGrid(WORDS);foundWords=new Set();
+      renderGrid();renderPictures();
       statusMsg.textContent=`0/${IMAGES.length} gefunden`;
     }
 
     resetBtn.addEventListener('click',init);
-    addEvents(); init();
+    addEvents();init();
   </script>
 </body>
 </html>
